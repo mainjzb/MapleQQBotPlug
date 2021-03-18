@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type persion struct {
+type person struct {
 	QQ    int
 	Score int
 }
@@ -18,7 +18,7 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 	if fromGroup != 732888280 && fromGroup != 667082876 {
 		return 0
 	}
-	checkgrop := 732888280
+	checkGroup := 732888280
 	dt := time.Now().Local().Add(-8 * time.Hour)
 	date := dt.Format("2006-01-02")
 
@@ -28,12 +28,12 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 
 		scoreStr := strings.TrimSpace(string(msgRune[4:]))
 		score, err := strconv.Atoi(scoreStr)
-		if score < 10 || score%5 != 0 || score > 100 {
-			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n录入失败: 请确认自己的分数,不要作弊！")
-			return 1
-		}
 		if err != nil {
 			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n录入失败: 不要输入无关文字")
+			return 1
+		}
+		if score < 10 || score%5 != 0 || score > 100 {
+			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n录入失败: 请确认自己的分数,不要作弊！")
 			return 1
 		}
 
@@ -46,18 +46,25 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 				return 1
 			} else {
 				stmt, _ := db.Prepare("INSERT INTO Log(QQ, Date, Score1, Score2, Score3, Score4, Score5) values(?, ?, ?, ?, ?, ?, ?)")
-				stmt.Exec(fromQQ, date, score, 0, 0, 0, 0)
+				_, err := stmt.Exec(fromQQ, date, score, 0, 0, 0, 0)
+				if err != nil {
+					SendGroupMsg(loginQQ, fromGroup, "数据插入库错误"+err.Error())
+					return 0
+				}
 				SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n录入成功！\n今日积分："+scoreStr+"\n请将截图加入群相册，方便管理查询")
 				return 1
 			}
 		} else {
 			currentScore := ""
-			var index, number int
-			for index, number = range historyScore {
+			for index, number := range historyScore {
 				if number == 0 {
 					historyScore[index] = score
 					stmt, _ := db.Prepare("UPDATE Log SET Score1 = ?, Score2 = ?, Score3 = ?, Score4 = ?, Score5 = ?  WHERE Date = ? AND QQ = ?  ")
-					stmt.Exec(historyScore[0], historyScore[1], historyScore[2], historyScore[3], historyScore[4], date, fromQQ)
+					_, err := stmt.Exec(historyScore[0], historyScore[1], historyScore[2], historyScore[3], historyScore[4], date, fromQQ)
+					if err != nil {
+						SendGroupMsg(loginQQ, fromGroup, "数据插入库错误"+err.Error())
+						return 0
+					}
 				}
 				if index != 0 {
 					currentScore += "+"
@@ -123,7 +130,7 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 				}
 			*/
 
-			resultContent += strconv.Itoa(per.Score) + "  " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+			resultContent += strconv.Itoa(per.Score) + "  " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 		}
 		//读取游戏总分
 		nowScore, beforeScore, err := getTotalScore()
@@ -151,7 +158,7 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		sumScore, persions, _ := guildThisWeek(loginQQ, fromGroup, fromQQ, weekNumber)
 		resultContent := "本周玩家总分：" + strconv.Itoa(sumScore) + "\n"
 		for _, per := range persions {
-			resultContent += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+			resultContent += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent)
 		return 1
@@ -168,9 +175,9 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		for _, per := range persions {
 			//persions[index]
 			if per.Score > 50 {
-				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			} else {
-				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			}
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent1)
@@ -178,20 +185,20 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		return 1
 	} else if msg == "跑旗七天" || msg == "七天跑旗" || msg == "7天跑旗" || msg == "跑旗7天" ||
 		msg == "最近7天跑旗" || msg == "最近七天跑旗" || msg == "跑旗最近7天" || msg == "跑旗最近七天" {
-		sumScore, persions, _ := guildThisWeek(loginQQ, fromGroup, fromQQ, time.Duration(6))
+		sumScore, persons, _ := guildThisWeek(loginQQ, fromGroup, fromQQ, time.Duration(6))
 		resultContent := "最近7天玩家总分：" + strconv.Itoa(sumScore) + "\n"
-		for _, per := range persions {
-			resultContent += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+		for _, per := range persons {
+			resultContent += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent)
 		return 1
 	} else if msg == "跑旗删除" || msg == "删除跑旗" {
 		stmt, _ := db.Prepare("DELETE FROM Log WHERE Date = ? AND QQ = ?")
-		stmsRsult, _ := stmt.Exec(date, fromQQ)
-		if size, _ := stmsRsult.RowsAffected(); size == 0 {
-			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(int(fromQQ))+"]\n您今日未登记过。\n提示：晚上8点前的数据都算为昨天。")
+		stmtResult, _ := stmt.Exec(date, fromQQ)
+		if size, _ := stmtResult.RowsAffected(); size == 0 {
+			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n您今日未登记过。\n提示：晚上8点前的数据都算为昨天。")
 		} else {
-			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(int(fromQQ))+"]\n删除记录成功")
+			SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]\n删除记录成功")
 
 		}
 		return 1
@@ -288,16 +295,16 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 	} else if msg == "本轮跑旗" {
 		weekNumber := (time.Duration(dt.Weekday()) + 3) % 7 // 周四是一轮的第一天 0
 		//美国人周日是0第一天 weekNumber == -1
-		sumScore, persions, _ := guildThisWeek(loginQQ, fromGroup, fromQQ, time.Duration(weekNumber))
+		sumScore, persions, _ := guildThisWeek(loginQQ, fromGroup, fromQQ, weekNumber)
 		resultContent := "周四是第一天\n本轮玩家总分：" + strconv.Itoa(sumScore) + "\n"
 		resultContent1 := resultContent
 		resultContent2 := ""
 		for _, per := range persions {
 			//persions[index]
 			if per.Score > 50 {
-				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			} else {
-				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			}
 		}
 
@@ -313,9 +320,9 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		for _, per := range persions {
 			//persions[index]
 			if per.Score > 50 {
-				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			} else {
-				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			}
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent1)
@@ -334,9 +341,9 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		for _, per := range persions {
 			//persions[index]
 			if per.Score > 50 {
-				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			} else {
-				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			}
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent1)
@@ -355,11 +362,10 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 		resultContent2 := ""
 		MedianScore := persions[len(persions)/2].Score
 		for _, per := range persions {
-			//persions[index]
 			if per.Score > MedianScore {
-				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent1 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			} else {
-				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkgrop, per.QQ))[:6]) + "\n"
+				resultContent2 += strconv.Itoa(per.Score) + "   " + string([]rune(GetGropCard(loginQQ, checkGroup, per.QQ))[:6]) + "\n"
 			}
 		}
 		SendGroupMsg(loginQQ, fromGroup, resultContent1)
@@ -368,9 +374,9 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, msg string) (result int) {
 	return 0
 }
 
-func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persions []persion, persionsMap map[int]int) {
+func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persions []person, persionsMap map[int]int) {
 
-	persions = make([]persion, 0, 30)
+	persions = make([]person, 0, 30)
 	persionsMap = make(map[int]int)
 
 	var historyScore [5]int
@@ -379,10 +385,12 @@ func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 	date := dt.Format("2006-01-02")
 
 	rows, err := db.Query(`SELECT Score1, Score2, Score3, Score4, Score5, QQ from Log where Date>=? `, date)
-	if err != nil {
-		SendGroupMsg(loginQQ, fromGroup, "数据库错误1:"+err.Error())
+	if err != nil || rows == nil {
+		SendGroupMsg(loginQQ, fromGroup, "数据库错误1")
+		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var qq int
 		err := rows.Scan(&historyScore[0], &historyScore[1], &historyScore[2], &historyScore[3], &historyScore[4], &qq)
@@ -396,13 +404,14 @@ func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 
 		sumScore += qqScore
 	}
+
 	err = rows.Err()
 	if err != nil {
 		SendGroupMsg(loginQQ, fromGroup, "数据库错误3:"+err.Error())
 	}
 
 	for key, value := range persionsMap {
-		persions = append(persions, persion{key, value})
+		persions = append(persions, person{key, value})
 	}
 	sort.Slice(persions, func(i, j int) bool {
 		return persions[i].Score > persions[j].Score
@@ -412,9 +421,9 @@ func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 
 }
 
-func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persions []persion, persionsMap map[int]int) {
+func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persions []person, persionsMap map[int]int) {
 
-	persions = make([]persion, 0, 30)
+	persions = make([]person, 0, 30)
 	persionsMap = make(map[int]int)
 
 	var historyScore [5]int
@@ -423,10 +432,12 @@ func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 	dt2 := time.Now().Add(-8*time.Hour - (weekNumber)*24*time.Hour).Format("2006-01-02")
 
 	rows, err := db.Query(`SELECT Score1, Score2, Score3, Score4, Score5, QQ from Log where Date>=? And Date <? `, dt1, dt2)
-	if err != nil {
-		SendGroupMsg(loginQQ, fromGroup, "数据库错误1:"+err.Error())
+	if err != nil || rows == nil {
+		SendGroupMsg(loginQQ, fromGroup, "数据库错误1:")
+		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var qq int
 		err := rows.Scan(&historyScore[0], &historyScore[1], &historyScore[2], &historyScore[3], &historyScore[4], &qq)
@@ -440,13 +451,14 @@ func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 
 		sumScore += qqScore
 	}
+
 	err = rows.Err()
 	if err != nil {
 		SendGroupMsg(loginQQ, fromGroup, "数据库错误3:"+err.Error())
 	}
 
 	for key, value := range persionsMap {
-		persions = append(persions, persion{key, value})
+		persions = append(persions, person{key, value})
 	}
 	sort.Slice(persions, func(i, j int) bool {
 		return persions[i].Score > persions[j].Score
@@ -456,9 +468,9 @@ func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 
 }
 
-func guildFlagRaceQuery(loginQQ, fromGroup, fromQQ int, dt1, dt2 string) (sumScore int, persions []persion, persionsMap map[int]int) {
+func guildFlagRaceQuery(loginQQ, fromGroup, fromQQ int, dt1, dt2 string) (sumScore int, persions []person, persionsMap map[int]int) {
 
-	persions = make([]persion, 0, 30)
+	persions = make([]person, 0, 30)
 	persionsMap = make(map[int]int)
 
 	var historyScore [5]int
@@ -479,15 +491,18 @@ func guildFlagRaceQuery(loginQQ, fromGroup, fromQQ int, dt1, dt2 string) (sumSco
 	}
 
 	rows, err := db.Query(`SELECT Score1, Score2, Score3, Score4, Score5, QQ from Log where Date>=? And Date <= ? `, dt1, dt2)
-	if err != nil {
-		SendGroupMsg(loginQQ, fromGroup, "数据库错误1:"+err.Error())
+	if err != nil || rows == nil {
+		SendGroupMsg(loginQQ, fromGroup, "数据库错误1:")
+		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var qq int
 		err := rows.Scan(&historyScore[0], &historyScore[1], &historyScore[2], &historyScore[3], &historyScore[4], &qq)
 		if err != nil {
 			SendGroupMsg(loginQQ, fromGroup, "数据库错误2:"+err.Error())
+			return
 		}
 
 		qqScore := historyScore[0] + historyScore[1] + historyScore[2] + historyScore[3] + historyScore[4]
@@ -496,13 +511,14 @@ func guildFlagRaceQuery(loginQQ, fromGroup, fromQQ int, dt1, dt2 string) (sumSco
 
 		sumScore += qqScore
 	}
+
 	err = rows.Err()
 	if err != nil {
 		SendGroupMsg(loginQQ, fromGroup, "数据库错误3:"+err.Error())
 	}
 
 	for key, value := range persionsMap {
-		persions = append(persions, persion{key, value})
+		persions = append(persions, person{key, value})
 	}
 	sort.Slice(persions, func(i, j int) bool {
 		return persions[i].Score > persions[j].Score

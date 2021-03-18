@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/mainjzb/Golang-Bot/Translation"
-	"github.com/mainjzb/Golang-Bot/calc"
 	"github.com/mattn/go-ieproxy"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/net/websocket"
@@ -69,7 +67,6 @@ var gdb *gorm.DB
 var dbQA *sql.DB
 var banLists []string
 var adminQQs []int64
-var qqGroupNumber int64 = 856067978
 var loginQQ int = 2137511870
 
 func UnescapeUnicode(raw string) string {
@@ -83,11 +80,6 @@ func test() {
 	CheckClassRank(1, 1, 1, "夜光第一")
 }
 
-//go:generate cqcfg -c .
-// cqp: 名称: MapleRank
-// cqp: 版本: 1.0.0:1
-// cqp: 作者: mao9
-// cqp: 简介: 一个超棒的Go语言插件Demo，它会回复你的私聊消息~
 func main() {
 	//test()
 	//0----------------------------------------------
@@ -106,7 +98,7 @@ func main() {
 			_, err := ws.Write([]byte("123"))
 
 			if err != nil {
-				log.Fatal(err)
+				log.Println("WS Read Error ", err.Error())
 			}
 			time.Sleep(time.Second * 20)
 		}
@@ -114,9 +106,11 @@ func main() {
 
 	for {
 		m, err := ws.Read(msg)
-
 		if err != nil {
-			//log.Fatal(err)
+			//continue
+			//log.Fatal("WS Read Error ", err.Error())
+			log.Println("WS Read Error ", err.Error())
+			continue
 		}
 
 		if string(msg[:m]) == "NewEvent" {
@@ -133,16 +127,22 @@ func main() {
 			//提交请求
 			resp, err := client.Do(req)
 			if err != nil {
-				log.Fatal("error: get request")
-				log.Fatal(err)
+				//log.Fatal("error: get request")
+				//log.Fatal(err)
+				log.Println("error:", err)
+				continue
 			}
 			//读取返回值
 			resultByte, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Fatal("error: return value")
-				log.Fatal(err)
+				log.Println("ioutil.ReadAll Error:", err)
+				continue
 			}
-			resp.Body.Close()
+			err = resp.Body.Close()
+			if err != nil {
+				log.Println("resp.Body.Close Error:", err)
+				continue
+			}
 			//fmt.Println(string(resultByte))
 			//resultString := string(resultByte)
 			jsonList := bytes.Split(resultByte, []byte("\r"))
@@ -158,18 +158,16 @@ func main() {
 						return -1
 					}, string(jsonText))
 					cleanJson = strings.ReplaceAll(cleanJson, `\'`, `'`)
-					fmt.Println("start" + string(cleanJson) + "end")
+					fmt.Println("start" + cleanJson + "end")
 					err = json.Unmarshal([]byte(cleanJson), &message)
 					if err != nil {
-						log.Fatal("error: json")
-						log.Fatal(err)
-						fmt.Println("答应失败")
+						log.Println("error: json")
 						continue
 					}
 
 					if message.Status == "OK" {
-						for i, _ := range message.Events {
-							if message.Events[i].Type != "GroupMsg" {
+						for i, v := range message.Events {
+							if v.Type != "GroupMsg" {
 								continue
 							}
 
@@ -195,101 +193,12 @@ func main() {
 
 }
 
-func Baike(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-
-	if GuildCheck(loginQQ, fromGroup, fromQQ, groupMessage) != 0 {
-		//跑旗相关问答
-	} else if QAReply(loginQQ, fromGroup, fromQQ, groupMessage) {
-		//问题数据库查询
-
-	} else if IsDigitCalc(groupMessage) {
-		//计算器
-		answer, error := calc.Calc(groupMessage)
-		if error == nil {
-			SendGroupMsg(loginQQ, fromGroup, strconv.FormatFloat(answer, 'g', 12, 64))
-		}
-	} else if IsEnglish(groupMessage) {
-		//翻译
-		SendGroupMsg(loginQQ, fromGroup, Translation.Trans(groupMessage))
-	}
-	return true
-}
-
-func Translate(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-	SendGroupMsg(loginQQ, fromGroup, Translation.Trans(groupMessage))
-	return true
-}
-
-func AddQuestion(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-
-	messageStr := strings.Split(groupMessage, "\r答")
-	if len(messageStr) == 2 {
-		QAAddMatch(loginQQ, fromGroup, fromQQ, strings.TrimSpace(messageStr[0]), strings.TrimSpace(messageStr[1]))
-		return true
-	}
-
-	messageStr = strings.Split(groupMessage, "\n答")
-	if len(messageStr) == 2 {
-		QAAddMatch(loginQQ, fromGroup, fromQQ, strings.TrimSpace(messageStr[0]), strings.TrimSpace(messageStr[1]))
-		return true
-	}
-
-	messageStr = strings.Split(groupMessage, " 答")
-	if len(messageStr) == 2 {
-		QAAddMatch(loginQQ, fromGroup, fromQQ, strings.TrimSpace(messageStr[0]), strings.TrimSpace(messageStr[1]))
-		return true
-	}
-	return false
-}
-
 func init() {
 	// 初始化缓存
-	charactersCatch = make(map[string]charInfoResult)
+	charactersCatch = make(map[string]CharInfoResult)
 	charactersLevelRank = make(map[string]string)
 	checkNumberOfTimes = make(map[int]int)
-	/*
-		classUrl = map[string]string{
-			"Warrior":         "https://maplestory.nexon.net/rankings/job-ranking/explorer/warrior?rebootIndex=1&pageIndex=",
-			"Magician":        "https://maplestory.nexon.net/rankings/job-ranking/explorer/magician?rebootIndex=1&pageIndex=",
-			"Bowman":          "https://maplestory.nexon.net/rankings/job-ranking/explorer/bowman?rebootIndex=1&pageIndex=",
-			"Thief":           "https://maplestory.nexon.net/rankings/job-ranking/explorer/thief?rebootIndex=1&pageIndex=",
-			"Pirate":          "https://maplestory.nexon.net/rankings/job-ranking/explorer/pirate?rebootIndex=1&pageIndex=",
-			"Evan":            "https://maplestory.nexon.net/rankings/job-ranking/evan/null?rebootIndex=1&pageIndex=",
-			"Aran":            "https://maplestory.nexon.net/rankings/job-ranking/aran/aran?rebootIndex=1&pageIndex=",
-			"Mercedes":        "https://maplestory.nexon.net/rankings/job-ranking/mercedes/null?rebootIndex=1&pageIndex=",
-			"Luminous":        "https://maplestory.nexon.net/rankings/job-ranking/luminous/null?rebootIndex=1&pageIndex=",
-			"Jett":            "https://maplestory.nexon.net/rankings/job-ranking/jett/null?rebootIndex=1&pageIndex=",
-			"Mihile":          "https://maplestory.nexon.net/rankings/job-ranking/mihile/null?rebootIndex=1&pageIndex=",
-			"Kaiser":          "https://maplestory.nexon.net/rankings/job-ranking/kaiser/null?rebootIndex=1&pageIndex=",
-			"Angelic Buster":  "https://maplestory.nexon.net/rankings/job-ranking/angelic-buster/null?rebootIndex=1&pageIndex=",
-			"Phantom":         "https://maplestory.nexon.net/rankings/job-ranking/phantom/null?rebootIndex=1&pageIndex=",
-			"Hayato":          "https://maplestory.nexon.net/rankings/job-ranking/sengoku/hayato?rebootIndex=1&pageIndex=",
-			"Kanna":           "https://maplestory.nexon.net/rankings/job-ranking/sengoku/kanna?rebootIndex=1&pageIndex=",
-			"Xenon":           "https://maplestory.nexon.net/rankings/job-ranking/xenon/null?rebootIndex=1&pageIndex=",
-			"Zero":            "https://maplestory.nexon.net/rankings/job-ranking/zero/null?rebootIndex=1&pageIndex=",
-			"Beast Tamer":     "https://maplestory.nexon.net/rankings/job-ranking/beast-tamer/null?rebootIndex=1&pageIndex=",
-			"Shade":           "https://maplestory.nexon.net/rankings/job-ranking/shade/null?rebootIndex=1&pageIndex=",
-			"Kinesis":         "https://maplestory.nexon.net/rankings/job-ranking/kinesis/null?rebootIndex=1&pageIndex=",
-			"Blaster":         "https://maplestory.nexon.net/rankings/job-ranking/blaster/null?rebootIndex=1&pageIndex=",
-			"Cadena":          "https://maplestory.nexon.net/rankings/job-ranking/cadena/null?rebootIndex=1&pageIndex=",
-			"Illium":          "https://maplestory.nexon.net/rankings/job-ranking/illium/null?rebootIndex=1&pageIndex=",
-			"Ark":             "https://maplestory.nexon.net/rankings/job-ranking/ark/null?rebootIndex=1&pageIndex=",
-			"Pathfinder":      "https://maplestory.nexon.net/rankings/job-ranking/pathfinder/null?rebootIndex=1&pageIndex=",
-			"Hoyoung":         "https://maplestory.nexon.net/rankings/job-ranking/hoyoung/null?rebootIndex=1&pageIndex=",
-			"Adele":           "https://maplestory.nexon.net/rankings/job-ranking/adele/null?rebootIndex=1&pageIndex=",
-			"Dawn Warrior":    "https://maplestory.nexon.net/rankings/job-ranking/cygnus-knights/dawn-warrior?rebootIndex=1&pageIndex=",
-			"Blaze Wizard":    "https://maplestory.nexon.net/rankings/job-ranking/cygnus-knights/blaze-wizard?rebootIndex=1&pageIndex=",
-			"Wind Archer":     "https://maplestory.nexon.net/rankings/job-ranking/cygnus-knights/wind-archer?rebootIndex=1&pageIndex=",
-			"Night Walker":    "https://maplestory.nexon.net/rankings/job-ranking/cygnus-knights/night-walker?rebootIndex=1&pageIndex=",
-			"Thunder Breaker": "https://maplestory.nexon.net/rankings/job-ranking/cygnus-knights/thunder-breaker?rebootIndex=1&pageIndex=",
-			"Demon Slayer":    "https://maplestory.nexon.net/rankings/job-ranking/resistance/demon-slayer?rebootIndex=1&pageIndex=",
-			"Battle Mage":     "https://maplestory.nexon.net/rankings/job-ranking/resistance/battle-mage?rebootIndex=1&pageIndex=",
-			"Wild Hunter":     "https://maplestory.nexon.net/rankings/job-ranking/resistance/wild-hunter?rebootIndex=1&pageIndex=",
-			"Mechanicr":       "https://maplestory.nexon.net/rankings/job-ranking/resistance/mechanic?rebootIndex=1&pageIndex=",
-			"Demon Avenger":   "https://maplestory.nexon.net/rankings/job-ranking/resistance/demon-avenger?rebootIndex=1&pageIndex=",
-			"联盟":              "https://maplestory.nexon.net/rankings/legion/reboot-(na)?rebootIndex=0&pageIndex=",
-		}
-	*/
+
 	classUrl = map[string]string{
 		"Warrior":         "https://maplestory.nexon.net/api/ranking?id=job&id2=1&rebootIndex=1&page_index=",
 		"Magician":        "https://maplestory.nexon.net/api/ranking?id=job&id2=2&rebootIndex=1&page_index=",
@@ -331,10 +240,6 @@ func init() {
 		"Demon Avenger":   "https://maplestory.nexon.net/api/ranking?id=job&id2=209&rebootIndex=1&page_index=",
 		"联盟":              "https://maplestory.nexon.net/api/ranking?id=legion&id2=45&page_index=",
 	}
-	onEnable()
-}
-
-func onEnable() int32 {
 
 	//// 初始化数据库
 	var err error
@@ -356,43 +261,7 @@ func onEnable() int32 {
 		fmt.Println(err.Error())
 	}
 
-	/*
-		////读取禁言黑名单语句
-		for rows, _ := db.Query("SELECT * FROM banList"); rows.Next(); {
-			var rowString string
-			rows.Scan(&rowString)
-			banLists = append(banLists, rowString)
-		}
-
-		////读取管理员QQ
-		for rows, _ := db.Query("SELECT * FROM Admin"); rows.Next(); {
-			var rowString int64
-			rows.Scan(&rowString)
-			adminQQs = append(adminQQs, rowString)
-		}
-	*/
-
 	go CheckMaplestoryInfo()
-
-	return 0
-}
-
-func FindDB() (result string) {
-	rows, err := db.Query("SELECT * FROM Stack;")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	for rows.Next() {
-		var QQ int64
-		err = rows.Scan(&QQ)
-		if err != nil {
-			fmt.Println(err)
-		}
-		result += fmt.Sprintf("[CQ:at,qq=%v]\n", QQ)
-	}
-	fmt.Println(result)
-	return
 }
 
 func GetMaplestoryVersionInfo(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
@@ -464,7 +333,9 @@ func GetMaplestoryMaintainInfo(loginQQ, fromGroup, fromQQ int, groupMessage stri
 	return true
 }
 
+//查询官网信息
 func CheckMaplestoryInfo() {
+
 	var content string
 	for {
 		//cqp.AddLog(cqp.Info,"查询官网更新","info")
@@ -475,7 +346,6 @@ func CheckMaplestoryInfo() {
 			//cqp.AddLog(cqp.Info,"查询官网更新","失败1")
 			continue
 		}
-		defer resp.Body.Close()
 
 		doc, err := goquery.NewDocumentFromReader(resp.Body)
 		if err != nil {
@@ -495,21 +365,20 @@ func CheckMaplestoryInfo() {
 				} else if content != band {
 					content = band
 
-					Sendprivatemsg(loginQQ, 212427942, content)
-
 					SendGroupMsg(loginQQ, 318497715, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
 					SendGroupMsg(loginQQ, 318497715, content)
 
 					SendGroupMsg(loginQQ, 732888280, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
 					SendGroupMsg(loginQQ, 732888280, content)
-
-					//cqp.SendPrivateMsg(212427942, content)
-
 				}
-				//fmt.Println(content)
-				//result = "https://bbs.gjfmxd.com/"+band
 			}
 		})
+		err = resp.Body.Close()
+		if err != nil {
+			log.Println("CheckMaplestoryInfo: ", err.Error())
+			continue
+		}
+
 		time.Sleep(5 * time.Minute)
 	}
 }
@@ -569,7 +438,7 @@ func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 		{Translate, []string{"百科翻译", "百度翻译"}},
 		{GetMaplestoryVersionInfo, []string{"百科版本内容", "百科版本活动", "百科版本", "百科活动"}},
 		{GetMaplestoryMaintainInfo, []string{"百科维护"}},
-		{Baike, []string{"百科"}},
+		{Wiki, []string{"百科"}},
 	}
 
 	for _, command := range AllCommand {

@@ -92,23 +92,23 @@ type OfficialRank []struct {
 	WorldID         int         `json:"WorldID"`
 }
 
-type charInfoResult struct {
+type CharInfoResult struct {
 	imageUrl, info string
 }
 
 var classUrl map[string]string
 var checkNumberOfTimes map[int]int
-var charactersCatch map[string]charInfoResult
+var charactersCatch map[string]CharInfoResult
 var charactersLevelRank map[string]string
 var catchTime int
 var classLevelRank map[string]string
 
-func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
+func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	name = strings.TrimSpace(name)
 	resetCacheEveryday()
 
 	if checkNumberOfTimes[gropFromQQ] >= 12 {
-		return charInfoResult{"", "今日查询已达上限"}
+		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
 	if chara, ok := charactersCatch[name]; ok {
@@ -117,15 +117,6 @@ func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
 		return chara
 	}
 
-	//var PTransport = & http.Transport {Proxy: http.ProxyFromEnvironment}
-
-	//proxyUrl, err := url.Parse("http://proxyIp:proxyPort")
-	//ieproxy.OverrideEnvWithStaticProxy()
-	//http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
-	//client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
-
-	//req, err := http.NewRequest("GET", "https://api.maplestory.gg/v1/public/character/gms/" + name, nil)
-	//resp, err := client.Do(req)
 	ieproxy.OverrideEnvWithStaticProxy()
 	http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
 	client := http.Client{
@@ -138,7 +129,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
 		// handle error
 		resp2, err2 := client.Get("https://api.maplestory.gg/v1/public/character/gms/" + name)
 		if err2 != nil {
-			return charInfoResult{"", "查询失败"}
+			return CharInfoResult{"", "查询失败"}
 		}
 		defer resp2.Body.Close()
 		resp, resp2 = resp2, resp
@@ -149,13 +140,13 @@ func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
 	var mapleInfo MapleInfo
 	err = json.Unmarshal(body, &mapleInfo)
 	if err != nil {
-		return charInfoResult{"", "查询失败2"}
+		return CharInfoResult{"", "查询失败2"}
 	}
 
 	if mapleInfo.Message == "Unable to find character" {
 		//查询的角色不存在
 		checkNumberOfTimes[gropFromQQ] += 1
-		charactersCatch[name] = charInfoResult{"", "查询的角色不存在"}
+		charactersCatch[name] = CharInfoResult{"", "查询的角色不存在"}
 		return charactersCatch[name]
 	}
 
@@ -182,7 +173,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
 		result.info += fmt.Sprintf("联盟等级:%v（排名%v）\n", mapleInfo.LegionLevel, mapleInfo.LegionRank)
 		result.info += fmt.Sprintf("联盟战斗力:%v（每日%v币）\n", mapleInfo.LegionPower, mapleInfo.LegionCoinsPerDay)
 
-		var legionCoinCap int = 200
+		var legionCoinCap = 200
 		switch {
 		case mapleInfo.LegionLevel >= 8000:
 			legionCoinCap = 700
@@ -240,7 +231,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result charInfoResult) {
 	// 保存数据进缓存
 	checkNumberOfTimes[gropFromQQ] += 1
 	charactersLevelRank[strconv.Itoa(mapleInfo.ServerRank)] = name
-	if (mapleInfo.Class != "Thief" || mapleInfo.Class != "Dual Blade") && mapleInfo.ServerClassRanking != 0 {
+	if (mapleInfo.Class != "Thief" && mapleInfo.Class != "Dual Blade") || mapleInfo.ServerClassRanking != 0 {
 		classAndRank := mapleInfo.Class + strconv.Itoa(mapleInfo.ServerClassRanking)
 		classLevelRank[classAndRank] = name
 	}
@@ -273,11 +264,11 @@ func QueryWorldRanking(loginQQ, fromGroup, fromQQ int, groupMessage string) bool
 	return true
 }
 
-func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result charInfoResult) {
+func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result CharInfoResult) {
 	resetCacheEveryday()
 
 	if checkNumberOfTimes[gropFromQQ] >= 12 {
-		return charInfoResult{"", "今日查询已达上限"}
+		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
 	if characterName, ok := classLevelRank[rankNumber]; ok {
@@ -292,7 +283,9 @@ func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result ch
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
-	//
+	if err != nil {
+		return CharInfoResult{"", "查询失败:client.Do(req)获取失败"}
+	}
 
 	req.Header.Set("authority", "maplestory.nexon.net")
 	req.Header.Set("scheme", "https")
@@ -302,37 +295,35 @@ func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result ch
 	req.Header.Set("sec-fetch-site", "same-origin")
 	req.Header.Set("sec-fetch-mode", "cors")
 	req.Header.Set("sec-fetch-dest", "empty")
-	//req.Header.Set("referer", "https://maplestory.nexon.net/rankings/job-ranking/explorer/warrior?pageIndex=&rebootIndex1=6&page_index=1")
 	req.Header.Set("accept-encoding", "gzip, deflate, br")
 	req.Header.Set("accept-language", "en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5")
 
-	//resp, err := client.Get("https://maplestory.nexon.net/api/ranking?id=job&id2=1&page_index=1")
 	resp, err := client.Do(req)
 	if err != nil {
-		return charInfoResult{"", "查询失败:client.Do(req)获取失败"}
+		return CharInfoResult{"", "查询失败:client.Do(req)获取失败"}
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return charInfoResult{"", "查询失败:ReadAll获取失败"}
+		return CharInfoResult{"", "查询失败:ReadAll获取失败"}
 	}
 
 	var officialRank OfficialRank
 	err = json.Unmarshal(body, &officialRank)
 	if err != nil || len(officialRank) <= 0 {
-		return charInfoResult{"", "查询失败:json解析失败"}
+		return CharInfoResult{"", "查询失败:json解析失败"}
 	}
 
 	//fmt.Println(officialRank)
 	return CheckMapleGG(officialRank[0].CharacterName, gropFromQQ)
 }
 
-func QueryRanking(rankNumber string, gropFromQQ int, url string) (result charInfoResult) {
+func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInfoResult) {
 	resetCacheEveryday()
 
 	if checkNumberOfTimes[gropFromQQ] >= 12 {
-		return charInfoResult{"", "今日查询已达上限"}
+		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
 	if characterName, ok := charactersLevelRank[rankNumber]; ok {
@@ -354,16 +345,8 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result charInf
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Error: status code:", resp.StatusCode)
-		return charInfoResult{"", "查询失败"}
+		return CharInfoResult{"", "查询失败"}
 	}
-	/*
-		all, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("%s\n", all)
-
-	*/
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
@@ -372,7 +355,7 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result charInf
 
 	ss := doc.Find(".ranking-container table tbody tr td").Eq(2)
 	if !ss.Is("td") {
-		return charInfoResult{"", "查询失败"}
+		return CharInfoResult{"", "查询失败"}
 	}
 
 	characterName := strings.TrimSpace(ss.Text())
@@ -389,7 +372,7 @@ func resetCacheEveryday() {
 		classLevelRank = nil
 		classLevelRank = make(map[string]string)
 		charactersCatch = nil
-		charactersCatch = make(map[string]charInfoResult)
+		charactersCatch = make(map[string]CharInfoResult)
 		checkNumberOfTimes = nil
 		checkNumberOfTimes = make(map[int]int)
 	}
@@ -535,42 +518,4 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 	}
 	SendGroupMsg(loginQQ, fromGroup, "绑定成功")
 	return true
-}
-
-func getOfficialRank() {
-	ieproxy.OverrideEnvWithStaticProxy()
-	http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
-	client := http.Client{
-		Timeout: 4 * time.Second,
-	}
-
-	req, err := http.NewRequest("GET", "https://maplestory.nexon.net/api/ranking?id=job&id2=1&page_index=1", nil)
-
-	req.Header.Set("authority", "maplestory.nexon.net")
-	req.Header.Set("scheme", "https")
-	req.Header.Set("accept", "application/json, text/plain, */*")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36 Edg/89.0.774.54")
-	req.Header.Set("dnt", "1")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("referer", "https://maplestory.nexon.net/rankings/job-ranking/explorer/warrior?pageIndex=&rebootIndex1=6&page_index=1")
-	req.Header.Set("accept-encoding", "gzip, deflate, br")
-	req.Header.Set("accept-language", "en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6,zh-TW;q=0.5")
-
-	//resp, err := client.Get("https://maplestory.nexon.net/api/ranking?id=job&id2=1&page_index=1")
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	var officialRank OfficialRank
-	err = json.Unmarshal(body, &officialRank)
-	fmt.Println(officialRank)
 }
