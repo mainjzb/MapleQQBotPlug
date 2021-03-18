@@ -80,7 +80,7 @@ func UnescapeUnicode(raw string) string {
 func test() {
 
 	//QueryClassRanking("213", 1, "")
-	CheckClassRank(1, 1, 1, "联盟第九")
+	CheckClassRank(1, 1, 1, "夜光第一")
 }
 
 //go:generate cqcfg -c .
@@ -89,7 +89,7 @@ func test() {
 // cqp: 作者: mao9
 // cqp: 简介: 一个超棒的Go语言插件Demo，它会回复你的私聊消息~
 func main() {
-	test()
+	//test()
 	//0----------------------------------------------
 
 	ws, err := websocket.Dial("ws://127.0.0.1:10429", "", "ws://127.0.0.1:10429")
