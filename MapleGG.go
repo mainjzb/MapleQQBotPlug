@@ -111,32 +111,17 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
+	//map缓存查找
 	if chara, ok := charactersCatch[name]; ok {
 		checkNumberOfTimes[gropFromQQ] += 1
-		fmt.Println("CheckMapleGG cache")
 		return chara
 	}
 
-	ieproxy.OverrideEnvWithStaticProxy()
-	http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
-	client := http.Client{
-		Timeout: 4 * time.Second,
-	}
-
-	resp, err := client.Get("https://api.maplestory.gg/v1/public/character/gms/" + name)
-
+	body, err := webGetRequest("https://api.maplestory.gg/v1/public/character/gms/" + name)
 	if err != nil {
-		// handle error
-		resp2, err2 := client.Get("https://api.maplestory.gg/v1/public/character/gms/" + name)
-		if err2 != nil {
-			return CharInfoResult{"", "查询失败"}
-		}
-		defer resp2.Body.Close()
-		resp, resp2 = resp2, resp
+		return CharInfoResult{"", "查询失败"}
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	//s := string(body)
+
 	var mapleInfo MapleInfo
 	err = json.Unmarshal(body, &mapleInfo)
 	if err != nil {
@@ -182,7 +167,6 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		case mapleInfo.LegionLevel >= 3000:
 			legionCoinCap = 300
 		}
-
 		result.info += fmt.Sprintf("联盟币上限:%v\n", legionCoinCap)
 	}
 

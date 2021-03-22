@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/mainjzb/Golang-Bot/Translation"
 	"github.com/mainjzb/Golang-Bot/calc"
+	"github.com/mainjzb/Golang-Bot/config"
+	"github.com/shiguanghuxian/txai"
 	"strconv"
 	"strings"
 )
@@ -50,6 +52,13 @@ func Wiki(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 	} else if IsEnglish(groupMessage) {
 		//翻译
 		SendGroupMsg(loginQQ, fromGroup, Translation.Trans(groupMessage))
+	} else {
+		txAi := txai.New(config.Instance.QQChatID, config.Instance.QQChatKey, true)
+		response, err := txAi.NlpTextchatForText("123456", groupMessage)
+		if err != nil {
+			return true
+		}
+		SendGroupMsg(loginQQ, fromGroup, "[@"+strconv.Itoa(fromQQ)+"]"+response.Data.Answer)
 	}
 	return true
 }

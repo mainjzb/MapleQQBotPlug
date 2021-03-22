@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/mainjzb/Golang-Bot/config"
 	"github.com/mattn/go-ieproxy"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/net/websocket"
@@ -67,7 +69,9 @@ var gdb *gorm.DB
 var dbQA *sql.DB
 var banLists []string
 var adminQQs []int64
-var loginQQ int = 2137511870
+var loginQQ = 2137511870
+
+var configFile = flag.String("config", "./config.yaml", "配置文件路径")
 
 func UnescapeUnicode(raw string) string {
 	str, _ := strconv.Unquote(strings.Replace(strconv.Quote(raw), `\\u`, `\u`, -1))
@@ -76,12 +80,13 @@ func UnescapeUnicode(raw string) string {
 
 func test() {
 
-	//QueryClassRanking("213", 1, "")
-	CheckClassRank(1, 1, 1, "夜光第一")
+	Wiki(1, 1, 1, "百科我几岁")
+	//QueryClassRanking("213", 1"")
+	//CheckClassRank(1, 1, 1, "夜光第一")
 }
 
 func main() {
-	//test()
+	test()
 	//0----------------------------------------------
 
 	ws, err := websocket.Dial("ws://127.0.0.1:10429", "", "ws://127.0.0.1:10429")
@@ -198,6 +203,9 @@ func init() {
 	charactersCatch = make(map[string]CharInfoResult)
 	charactersLevelRank = make(map[string]string)
 	checkNumberOfTimes = make(map[int]int)
+
+	//config
+	config.Init(*configFile)
 
 	classUrl = map[string]string{
 		"Warrior":         "https://maplestory.nexon.net/api/ranking?id=job&id2=1&rebootIndex=1&page_index=",
@@ -383,43 +391,6 @@ func CheckMaplestoryInfo() {
 	}
 }
 
-func IsDigitCalc(data string) bool {
-	digit := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", " ", "(", ")", "+", "-", "*", "/", "."}
-	flag := false
-	for _, i := range data {
-		flag = false
-		for _, item := range digit {
-			if string(i) == item {
-				flag = true
-				break
-			}
-		}
-		if !flag {
-			return false
-		}
-	}
-	return true
-}
-
-func IsEnglish(data string) bool {
-	for i := range data {
-		if !(31 < data[i] && data[i] < 123) {
-			return false
-		}
-	}
-	return true
-}
-
-func IsPrefix(groupMessage string, prefixs ...string) (string, bool) {
-	for _, value := range prefixs {
-		if strings.HasPrefix(groupMessage, value) {
-			return strings.TrimSpace(groupMessage[len(value):]), true
-		}
-	}
-
-	return groupMessage, false
-}
-
 func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 	AllCommand := []struct {
 		Function func(loginQQ, fromGroup, fromQQ int, groupMessage string) bool
@@ -436,7 +407,7 @@ func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 		{DeleteAuth, []string{"删除权限"}},
 		{QADeleteQuestion, []string{"文本删除问题"}},
 		{Translate, []string{"百科翻译", "百度翻译"}},
-		{GetMaplestoryVersionInfo, []string{"百科版本内容", "百科版本活动", "百科版本", "百科活动"}},
+		{GetMaplestoryVersionInfo, []string{"百科版本内容", "百科版本活动", "百科版本"}},
 		{GetMaplestoryMaintainInfo, []string{"百科维护"}},
 		{Wiki, []string{"百科"}},
 	}
