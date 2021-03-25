@@ -37,6 +37,20 @@ func Translate(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 }
 
 func Wiki(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
+	AllCommand := []struct {
+		Function func(loginQQ, fromGroup, fromQQ int, groupMessage string) bool
+		Pre      []string
+	}{
+		{Translate, []string{"翻译", "翻译"}},
+		{GetMaplestoryVersionInfo, []string{"版本内容", "版本活动", "版本"}},
+		{GetMaplestoryMaintainInfo, []string{"维护"}}}
+
+	for _, command := range AllCommand {
+		groupMessage, ok := IsPrefix(groupMessage, command.Pre...)
+		if ok && command.Function(loginQQ, fromGroup, fromQQ, groupMessage) {
+			return true
+		}
+	}
 
 	if GuildCheck(loginQQ, fromGroup, fromQQ, groupMessage) != 0 {
 		//跑旗相关问答

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/mainjzb/Golang-Bot/config"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -56,7 +57,7 @@ func QAReply(loginQQ, fromGroup, fromQQ int, msg string) bool {
 	if len(answers) > 0 {
 		answer := answers[rand.Intn(len(answers))]
 		dir, _ := os.Getwd()
-		reg, _ := regexp.Compile(`(\[pic,[^\[\]]*\])`)
+		reg, _ := regexp.Compile(`\[pic,[^\[\]]*\]`)
 		picList := reg.FindStringSubmatch(answer)
 		for _, pic := range picList {
 			image := GetGroupImage(loginQQ, fromGroup, 1, dir+"\\Botimage\\"+pic)
@@ -118,7 +119,7 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 
 	//2.1  获取答案里的图片pic
 
-	reg, _ := regexp.Compile(`(\[pic,[^\[\]]*\])`)
+	reg, _ := regexp.Compile(`\[pic,[^\[\]]*\]`)
 	picList := reg.FindStringSubmatch(ansMsg)
 
 	//2.2 下载图片存到本地
@@ -126,7 +127,7 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 		imagPath := GetPhotoUrl(loginQQ, fromGroup, picHash)
 		dir, _ := os.Getwd()
 		name := picHash[:42] + ";time=" + strconv.FormatInt(time.Now().Unix(), 10) + "]"
-		pathName := dir + "\\Botimage\\" + name
+		pathName := dir + "\\" + config.Instance.ImageStorePath + "\\" + name
 		resp, err := http.Get(imagPath)
 		if err != nil {
 			return false

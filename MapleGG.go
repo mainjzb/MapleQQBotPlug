@@ -176,9 +176,9 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		var day float64
 		var dayOne float64
 		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(9654369842607-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
+			day = float64(dateLen-1) * float64(9652268252132-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
 			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(9654369842607-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+				dayOne = float64(9652268252132-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
 			}
 		}
 		if 0 < day && day < 2500 && 0 < dayOne && dayOne < 2500 {
@@ -191,9 +191,9 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		var day float64
 		var dayOne float64
 		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(86473581694476-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
+			day = float64(dateLen-1) * float64(86471480104001-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
 			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(86473581694476-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+				dayOne = float64(86471480104001-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
 			}
 		}
 		if 0 < day && day < 2500 && 0 < dayOne && dayOne < 2500 {

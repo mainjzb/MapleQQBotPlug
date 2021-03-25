@@ -7,9 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/mainjzb/Golang-Bot/config"
 	"github.com/mattn/go-ieproxy"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/robfig/cron/v3"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/websocket"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -69,7 +72,7 @@ var gdb *gorm.DB
 var dbQA *sql.DB
 var banLists []string
 var adminQQs []int64
-var loginQQ = 2137511870
+var loginQQ int
 
 var configFile = flag.String("config", "./config.yaml", "配置文件路径")
 
@@ -79,10 +82,16 @@ func UnescapeUnicode(raw string) string {
 }
 
 func test() {
+	/*
+		dir, _ := os.Getwd()
+		GetAllGroupList(loginQQ)
 
-	Wiki(1, 1, 1, "百科我几岁")
-	//QueryClassRanking("213", 1"")
-	//CheckClassRank(1, 1, 1, "夜光第一")
+		image1 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd1.jpg") //elemAd1.jpg
+		image2 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd2.jpg")
+		SendGroupMsg(loginQQ, 698931513, "嘀嘀嘀！干饭时间到了！冲冲冲!")
+		SendGroupMsg(loginQQ, 698931513, image1+image2)
+		//time.Sleep(time.Second * 3)
+	*/
 }
 
 func main() {
@@ -112,9 +121,8 @@ func main() {
 	for {
 		m, err := ws.Read(msg)
 		if err != nil {
-			//continue
-			//log.Fatal("WS Read Error ", err.Error())
-			log.Println("WS Read Error ", err.Error())
+
+			logrus.Error(err)
 			continue
 		}
 
@@ -132,20 +140,18 @@ func main() {
 			//提交请求
 			resp, err := client.Do(req)
 			if err != nil {
-				//log.Fatal("error: get request")
-				//log.Fatal(err)
-				log.Println("error:", err)
+				logrus.Error(err)
 				continue
 			}
 			//读取返回值
 			resultByte, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				log.Println("ioutil.ReadAll Error:", err)
+				logrus.Error(err)
 				continue
 			}
 			err = resp.Body.Close()
 			if err != nil {
-				log.Println("resp.Body.Close Error:", err)
+				logrus.Error(err)
 				continue
 			}
 			//fmt.Println(string(resultByte))
@@ -163,10 +169,10 @@ func main() {
 						return -1
 					}, string(jsonText))
 					cleanJson = strings.ReplaceAll(cleanJson, `\'`, `'`)
-					fmt.Println("start" + cleanJson + "end")
+					logrus.Info(cleanJson)
 					err = json.Unmarshal([]byte(cleanJson), &message)
 					if err != nil {
-						log.Println("error: json")
+						logrus.Error(err)
 						continue
 					}
 
@@ -205,7 +211,26 @@ func init() {
 	checkNumberOfTimes = make(map[int]int)
 
 	//config
-	config.Init(*configFile)
+	conf := config.Init(*configFile)
+	loginQQ = conf.LoginQQ
+
+	// 初始化日志
+	writer, _ := rotatelogs.New(
+		conf.LogFile+".%Y%m%d%H",
+		rotatelogs.WithLinkName(conf.LogFile),
+		rotatelogs.WithMaxAge(time.Duration(3)*time.Hour),
+		rotatelogs.WithRotationTime(time.Duration(36)*time.Hour),
+	)
+	logrus.SetOutput(writer)
+	logrus.SetLevel(logrus.InfoLevel)
+
+	/*
+		if file, err := os.OpenFile(conf.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
+			logrus.SetOutput(io.MultiWriter(os.Stdout, file))
+		} else {
+			logrus.SetOutput(os.Stdout)
+			logrus.Error(err)
+		}*/
 
 	classUrl = map[string]string{
 		"Warrior":         "https://maplestory.nexon.net/api/ranking?id=job&id2=1&rebootIndex=1&page_index=",
@@ -268,6 +293,16 @@ func init() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+
+	//
+	cronClient := cron.New()
+	cronClient.AddFunc("10 18 * * ?", sendADs)
+	errID, err := cronClient.AddFunc("0 30 * * * *", func() { fmt.Println("Every hour on the half hour") })
+	if err != nil {
+		logrus.Error(err, errID)
+	}
+
+	cronClient.Start()
 
 	go CheckMaplestoryInfo()
 }
@@ -373,11 +408,10 @@ func CheckMaplestoryInfo() {
 				} else if content != band {
 					content = band
 
-					SendGroupMsg(loginQQ, 318497715, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
-					SendGroupMsg(loginQQ, 318497715, content)
-
-					SendGroupMsg(loginQQ, 732888280, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
-					SendGroupMsg(loginQQ, 732888280, content)
+					for _, v := range config.Instance.OfficialNoticeQQGroup {
+						SendGroupMsg(loginQQ, v, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
+						SendGroupMsg(loginQQ, v, content)
+					}
 				}
 			}
 		})
@@ -389,6 +423,25 @@ func CheckMaplestoryInfo() {
 
 		time.Sleep(5 * time.Minute)
 	}
+}
+
+func sendADs() {
+	dir, _ := os.Getwd()
+
+	image1 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd1.jpg") //elemAd1.jpg
+	image2 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd2.jpg")
+	SendGroupMsg(loginQQ, 698931513, "嘀嘀嘀！干饭时间到了！冲冲冲!")
+	SendGroupMsg(loginQQ, 698931513, image1+image2)
+	/*
+		groupList := GetAllGroupList(loginQQ)
+		for _, group := range groupList {
+			image1 := GetGroupImage(loginQQ, group, 1, dir+"\\Botimage\\elemAd1.jpg") //elemAd1.jpg
+			image2 := GetGroupImage(loginQQ, group, 1, dir+"\\Botimage\\elemAd2.jpg")
+			SendGroupMsg(loginQQ, group, "嘀嘀嘀！干饭时间到了！冲冲冲!")
+			SendGroupMsg(loginQQ, group, image1+image2)
+			time.Sleep(time.Second * 3)
+		}
+	*/
 }
 
 func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
@@ -406,9 +459,6 @@ func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 		{ChangeAuth, []string{"修改权限"}},
 		{DeleteAuth, []string{"删除权限"}},
 		{QADeleteQuestion, []string{"文本删除问题"}},
-		{Translate, []string{"百科翻译", "百度翻译"}},
-		{GetMaplestoryVersionInfo, []string{"百科版本内容", "百科版本活动", "百科版本"}},
-		{GetMaplestoryMaintainInfo, []string{"百科维护"}},
 		{Wiki, []string{"百科"}},
 	}
 
