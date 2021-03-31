@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type QQBanList struct {
+	QQ int
+}
+
 func webGetRequest(url string) (result []byte, err error) {
 	ieproxy.OverrideEnvWithStaticProxy()
 	http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
@@ -63,4 +67,17 @@ func IsEnglish(data string) bool {
 		}
 	}
 	return true
+}
+
+func IsBanQQ(qq int) bool {
+	user := QQBanList{QQ: qq}
+
+	//gdb.AutoMigrate(&QQBanList{})
+
+	characterResult := gdb.First(&user, "qq = ?", qq)
+	if characterResult.RowsAffected > 0 {
+		return true
+	} else {
+		return false
+	}
 }

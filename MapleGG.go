@@ -19,7 +19,8 @@ import (
 type QQBindCharacter struct {
 	gorm.Model
 	Character string
-	QQ        int
+	QQ        int `gorm:"primarykey"`
+	Lock      bool
 }
 
 type MapleInfo struct {
@@ -455,7 +456,7 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		user := QQBindCharacter{QQ: fromQQ}
 		//gdb.Delete(user)
 		//gdb.Create(user)
-		result := gdb.Where("QQ = ?", fromQQ).First(&user)
+		result := gdb.First(&user, "QQ = ?", fromQQ)
 
 		if result.RowsAffected > 0 {
 			groupMessage = user.Character
@@ -488,15 +489,28 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		}
 	}
 
-	user := QQBindCharacter{QQ: fromQQ}
+	gdb.AutoMigrate(&QQBindCharacter{})
 
-	result := gdb.Where("QQ = ?", fromQQ).First(&user)
-	user.Character = groupMessage
+	user := QQBindCharacter{QQ: fromQQ}
+	groupMessage = strings.ToLower(groupMessage) //角色名无视大小写，全部小写录入可锁定角色
+
+	characterResult := gdb.First(&user, "character = ?", groupMessage)
+	if characterResult.Error != gorm.ErrRecordNotFound && characterResult.Error != nil {
+		SendGroupMsg(loginQQ, fromGroup, characterResult.Error.Error())
+		return true
+	} else if characterResult.RowsAffected > 0 && user.Lock == true {
+		SendGroupMsg(loginQQ, fromGroup, "请绑定自己的角色")
+		return true
+	}
+
+	result := gdb.First(&user, "QQ = ?", fromQQ)
 	if result.Error != gorm.ErrRecordNotFound && result.Error != nil {
 		SendGroupMsg(loginQQ, fromGroup, result.Error.Error())
+		return true
 	}
+
 	if result.RowsAffected > 0 {
-		gdb.Model(&user).Where("QQ = ?", fromQQ).Update("character", groupMessage)
+		gdb.Model(&user).Update("Character", groupMessage)
 	} else {
 		gdb.Create(&user)
 	}

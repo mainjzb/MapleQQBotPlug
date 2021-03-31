@@ -92,6 +92,9 @@ func test() {
 		SendGroupMsg(loginQQ, 698931513, image1+image2)
 		//time.Sleep(time.Second * 3)
 	*/
+	//bindCharacter(1, 350210491, 350210491, "PaperWang")
+	//IsBanQQ(1229237658)
+	bindCharacter(1, 350210491, 350210491, "PaperWang1")
 }
 
 func main() {
@@ -215,12 +218,15 @@ func init() {
 	loginQQ = conf.LoginQQ
 
 	// 初始化日志
-	writer, _ := rotatelogs.New(
+	writer, err := rotatelogs.New(
 		conf.LogFile+".%Y%m%d%H",
 		rotatelogs.WithLinkName(conf.LogFile),
 		rotatelogs.WithMaxAge(time.Duration(3)*time.Hour),
 		rotatelogs.WithRotationTime(time.Duration(36)*time.Hour),
 	)
+	if err != nil {
+		panic(err)
+	}
 	logrus.SetOutput(writer)
 	logrus.SetLevel(logrus.InfoLevel)
 
@@ -275,7 +281,7 @@ func init() {
 	}
 
 	//// 初始化数据库
-	var err error
+
 	dir, _ := os.Getwd()
 	fmt.Println(dir)
 
@@ -445,6 +451,9 @@ func sendADs() {
 }
 
 func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
+	if IsBanQQ(fromQQ) {
+		return
+	}
 	AllCommand := []struct {
 		Function func(loginQQ, fromGroup, fromQQ int, groupMessage string) bool
 		Pre      []string
