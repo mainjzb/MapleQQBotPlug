@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"github.com/mainjzb/Golang-Bot/config"
+	"github.com/mainjzb/MapleQQBotPlug/config"
 	"sort"
 	"strconv"
 	"time"

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/mainjzb/Golang-Bot/Translation"
-	"github.com/mainjzb/Golang-Bot/calc"
-	"github.com/mainjzb/Golang-Bot/config"
+	"github.com/mainjzb/MapleQQBotPlug/Translation"
+	"github.com/mainjzb/MapleQQBotPlug/calc"
+	"github.com/mainjzb/MapleQQBotPlug/config"
 	"github.com/shiguanghuxian/txai"
 	"strconv"
 	"strings"

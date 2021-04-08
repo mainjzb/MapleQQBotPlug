@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	"github.com/mainjzb/Golang-Bot/config"
+	"github.com/mainjzb/MapleQQBotPlug/config"
+	"github.com/mainjzb/MapleQQBotPlug/service"
 	"github.com/mattn/go-ieproxy"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron/v3"
@@ -94,7 +95,16 @@ func test() {
 	*/
 	//bindCharacter(1, 350210491, 350210491, "PaperWang")
 	//IsBanQQ(1229237658)
-	bindCharacter(1, 350210491, 350210491, "PaperWang1")
+	//bindCharacter(1, 350210491, 350210491, "PaperWang1")
+	//gdb, err := gorm.Open(sqlite.Open("MapleMiao.db"), &gorm.Config{})
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//cas := service.NewCasbin(gdb)
+	//service.AddLevel(698931513, 212427942, 123456, 2)
+	//ok, _ := cas.Enforce(698931513, 212427942, service.QA, "write")
+	//service.DeleteLevel(698931513, 212427942, 123456)
+	//fmt.Println(ok)
 }
 
 func main() {
@@ -300,6 +310,7 @@ func init() {
 		fmt.Println(err.Error())
 	}
 
+	service.NewCasbin(gdb)
 	//
 	cronClient := cron.New()
 	cronClient.AddFunc("10 18 * * ?", sendADs)

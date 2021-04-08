@@ -17,6 +17,7 @@ type Config struct {
 	QQChatKey             string `yaml:"QQChatKey"`
 	GuildFlagRaceQQGroup  []int  `yaml:"GuildFlagRaceQQGroup"`
 	OfficialNoticeQQGroup []int  `yaml:"OfficialNoticeQQGroup"`
+	QAEditQQGroup         []int  `yaml:"QAEditQQGroup"`
 }
 
 func Init(filename string) *Config {

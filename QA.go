@@ -3,7 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mainjzb/Golang-Bot/config"
+	"github.com/mainjzb/MapleQQBotPlug/config"
+	"github.com/mainjzb/MapleQQBotPlug/service"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -77,16 +78,16 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 		2、添加回答，父ID是问题ID
 	*/
 
-	if AuthorityQuery(fromGroup, fromQQ) < 2 {
+	if !service.IsEditQA(fromGroup, fromQQ) {
 		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return false
+		return true
 	}
 
 	// 1、查询这个问题是否存在，不存在则创建问题
 	parentID, lock := getQueMsgID(fromGroup, queMsg)
 	if lock == 1 {
 		SendGroupMsg(loginQQ, fromGroup, "添加失败，词条已锁定")
-		return false
+		return true
 	}
 
 	if parentID < 0 {
@@ -176,15 +177,15 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 
 func QADeleteQuestion(loginQQ, fromGroup, fromQQ int, msg string) bool {
 
-	if AuthorityQuery(fromGroup, fromQQ) < 2 {
+	if !service.IsEditQA(fromGroup, fromQQ) {
 		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return false
+		return true
 	}
 
 	parentID, lock := getQueMsgID(fromGroup, msg)
 	if parentID < 0 || lock == 1 {
 		SendGroupMsg(loginQQ, fromGroup, "删除失败，问题不存在或已锁定")
-		return false
+		return true
 	}
 
 	//delete question
@@ -325,45 +326,14 @@ func ChangeAuth(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		return true
 	}
 	AuthLevel, err := strconv.Atoi(strings.TrimSpace(strList[1]))
+	if err != nil {
+		return true
+	}
 
-	if AuthorityQuery(fromGroup, fromQQ) >= 5 && AuthLevel < 5 || AuthorityQuery(fromGroup, fromQQ) >= 10 {
-
+	if service.DeleteLevel(fromGroup, fromQQ, AuthQQ) && service.AddLevel(fromGroup, fromQQ, AuthQQ, AuthLevel) {
+		SendGroupMsg(loginQQ, fromGroup, "修改成功")
 	} else {
-		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return false
-	}
-
-	//删除权限
-	stmtAns, err := dbQA.Prepare("delete from group_member where gc = ? AND qq = ?")
-	if err != nil {
-		return false
-	}
-	defer stmtAns.Close()
-
-	_, err = stmtAns.Exec(fromGroup, AuthQQ)
-	if err != nil {
-		return false
-	}
-
-	//修改权限
-	stmt2, err := dbQA.Prepare(`INSERT INTO group_member("id", "gc", "qq", "right", "silentState", "silentEndTime", "point", "remark", "createdTime") VALUES (NULL, ?, ?, ?, 0, 0, 0, '', ?);
-`)
-	if err != nil {
-		fmt.Println(err.Error())
-		return true
-	}
-	defer stmt2.Close()
-
-	res, err := stmt2.Exec(fromGroup, AuthQQ, AuthLevel, time.Now().Unix())
-	if err != nil {
-		return true
-	}
-
-	if rowNum, err := res.RowsAffected(); rowNum == int64(1) && err == nil {
-		SendGroupMsg(loginQQ, fromGroup, "权限修改成功")
-	} else {
-		SendGroupMsg(loginQQ, fromGroup, "权限修改失败")
-		return true
+		SendGroupMsg(loginQQ, fromGroup, "修改失败")
 	}
 
 	return true
@@ -374,29 +344,16 @@ func DeleteAuth(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 	if err != nil {
 		return false
 	}
-
-	if AuthorityQuery(fromGroup, fromQQ) < 5 {
-		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return true
+	if service.DeleteLevel(fromGroup, fromQQ, AuthQQ) {
+		SendGroupMsg(loginQQ, fromGroup, "删除成功")
+	} else {
+		SendGroupMsg(loginQQ, fromGroup, "删除失败")
 	}
-
-	stmtAns, err := dbQA.Prepare("delete from group_member where gc = ? AND qq = ?")
-	if err != nil {
-		return true
-	}
-	defer stmtAns.Close()
-
-	_, err = stmtAns.Exec(fromGroup, AuthQQ)
-	if err != nil {
-		return true
-	}
-
-	SendGroupMsg(loginQQ, fromGroup, "成功删除权限:"+strconv.Itoa(AuthQQ))
 	return true
 }
 
 func QueryQuestion(loginQQ, fromGroup, fromQQ int, Quemsg string) bool {
-	if AuthorityQuery(fromGroup, fromQQ) < 2 {
+	if !service.IsQueryQA(fromGroup, fromQQ) {
 		SendGroupMsg(loginQQ, fromGroup, "权限不足")
 		return false
 	}
@@ -405,7 +362,7 @@ func QueryQuestion(loginQQ, fromGroup, fromQQ int, Quemsg string) bool {
 	parentID, _ := getQueMsgID(fromGroup, Quemsg)
 	if parentID < 0 {
 		SendGroupMsg(loginQQ, fromGroup, "问题不存在")
-		return false
+		return true
 	}
 
 	result += "问题[" + strconv.FormatInt(parentID, 10) + "]：" + Quemsg + "\n"
@@ -451,9 +408,9 @@ func QueryQuestion(loginQQ, fromGroup, fromQQ int, Quemsg string) bool {
 }
 
 func QueryContainQuestion(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-	if AuthorityQuery(fromGroup, fromQQ) < 2 {
+	if !service.IsQueryQA(fromGroup, fromQQ) {
 		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return false
+		return true
 	}
 
 	result := ""
@@ -461,7 +418,7 @@ func QueryContainQuestion(loginQQ, fromGroup, fromQQ int, groupMessage string) b
 
 	if len(questions) == 0 {
 		SendGroupMsg(loginQQ, fromGroup, "未搜索到任何问题")
-		return false
+		return true
 	}
 
 	for parentID, queMsg := range questions {
@@ -513,10 +470,11 @@ func QueryContainQuestion(loginQQ, fromGroup, fromQQ int, groupMessage string) b
 }
 
 func DeleteAnswer(loginQQ, fromGroup, fromQQ int, msg string) bool {
-	if AuthorityQuery(fromGroup, fromQQ) < 2 {
+	if !service.IsEditQA(fromGroup, fromQQ) {
 		SendGroupMsg(loginQQ, fromGroup, "权限不足")
-		return false
+		return true
 	}
+
 	parentID, err := strconv.Atoi(msg)
 	if err != nil {
 		return false

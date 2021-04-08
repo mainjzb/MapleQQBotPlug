@@ -421,6 +421,7 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		{[]string{"Demon Avenger", "白毛", "DA"}},
 	}
 
+	//查询排名
 	for _, class := range AllClass {
 		groupMessage, ok := IsPrefix(groupMessage, generalNameCreate(class.Names)...)
 		if ok {
@@ -451,6 +452,7 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 			return true
 		}
 	}
+
 	//查询我
 	if groupMessage == "me" || groupMessage == "wo" || groupMessage == "我" {
 		user := QQBindCharacter{QQ: fromQQ}
@@ -465,12 +467,12 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		}
 	}
 
+	//查询{角色名}
 	for _, v := range groupMessage {
 		if unicode.Is(unicode.Han, v) {
 			return false
 		}
 	}
-
 	character := CheckMapleGG(groupMessage, fromQQ)
 	if character.imageUrl == "" {
 		SendGroupMsg(loginQQ, fromGroup, character.info)
@@ -489,31 +491,22 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		}
 	}
 
-	gdb.AutoMigrate(&QQBindCharacter{})
+	//gdb.AutoMigrate(&QQBindCharacter{})
 
 	user := QQBindCharacter{QQ: fromQQ}
-	groupMessage = strings.ToLower(groupMessage) //角色名无视大小写，全部小写录入可锁定角色
+	groupMessage = strings.ToLower(groupMessage) //角色名无视大小写，全部小写录入可锁定角色,防止大小写不同重复录入
 
-	characterResult := gdb.First(&user, "character = ?", groupMessage)
-	if characterResult.Error != gorm.ErrRecordNotFound && characterResult.Error != nil {
-		SendGroupMsg(loginQQ, fromGroup, characterResult.Error.Error())
-		return true
-	} else if characterResult.RowsAffected > 0 && user.Lock == true {
-		SendGroupMsg(loginQQ, fromGroup, "请绑定自己的角色")
-		return true
-	}
-
-	result := gdb.First(&user, "QQ = ?", fromQQ)
-	if result.Error != gorm.ErrRecordNotFound && result.Error != nil {
-		SendGroupMsg(loginQQ, fromGroup, result.Error.Error())
-		return true
-	}
-
-	if result.RowsAffected > 0 {
-		gdb.Model(&user).Update("Character", groupMessage)
+	//角色名拆失败
+	if gdb.First(&user, "(character = ? OR qq = ?) AND lock = true ", groupMessage).RowsAffected == 0 {
+		//更新数据库
+		if gdb.Model(user).Update("Character", groupMessage).RowsAffected == 0 {
+			gdb.Create(&user)
+		}
+		SendGroupMsg(loginQQ, fromGroup, "绑定成功")
 	} else {
-		gdb.Create(&user)
+		SendGroupMsg(loginQQ, fromGroup, "绑定失败")
+		return true
 	}
-	SendGroupMsg(loginQQ, fromGroup, "绑定成功")
+
 	return true
 }
