@@ -61,7 +61,7 @@ type MapleInfo struct {
 	ServerSlug         string `json:"ServerSlug"`
 }
 
-type OfficialRank []struct {
+type OfficialWorldRank []struct {
 	Rank            int         `json:"Rank"`
 	CharacterImgURL string      `json:"CharacterImgUrl"`
 	PetImgURL       string      `json:"PetImgUrl"`
@@ -93,16 +93,168 @@ type OfficialRank []struct {
 	WorldID         int         `json:"WorldID"`
 }
 
-type CharInfoResult struct {
-	imageUrl, info string
+type OfficialJobRank []struct {
+	AccountID       interface{} `json:"AccountId"`
+	CharacterID     int64       `json:"CharacterID"`
+	CharacterImgURL string      `json:"CharacterImgUrl"`
+	CharacterName   string      `json:"CharacterName"`
+	CombatPower     interface{} `json:"CombatPower"`
+	Exp             int64       `json:"Exp"`
+	Gap             int64       `json:"Gap"`
+	GuildName       interface{} `json:"GuildName"`
+	IsSearchTarget  bool        `json:"IsSearchTarget"`
+	JobDetail       int64       `json:"JobDetail"`
+	JobID           int64       `json:"JobID"`
+	JobName         string      `json:"JobName"`
+	LegionLevel     int64       `json:"LegionLevel"`
+	Level           int64       `json:"Level"`
+	MatchSN         interface{} `json:"MatchSN"`
+	Percentile      interface{} `json:"Percentile"`
+	PetImgURL       string      `json:"PetImgUrl"`
+	RaidPower       int64       `json:"RaidPower"`
+	Rank            int64       `json:"Rank"`
+	Score           interface{} `json:"Score"`
+	SeasonNo        int64       `json:"SeasonNo"`
+	Stage           int64       `json:"Stage"`
+	StarSum         int64       `json:"StarSum"`
+	StartRank       int64       `json:"StartRank"`
+	TierName        string      `json:"TierName"`
+	TimeSum         int64       `json:"TimeSum"`
+	TranferStatus   int64       `json:"TranferStatus"`
+	WorldID         int64       `json:"WorldID"`
+	WorldName       string      `json:"WorldName"`
 }
 
-var classUrl map[string]string
+type OfficialLegionRank []struct {
+	AccountID       interface{} `json:"AccountId"`
+	CharacterID     int64       `json:"CharacterID"`
+	CharacterImgURL string      `json:"CharacterImgUrl"`
+	CharacterName   string      `json:"CharacterName"`
+	CombatPower     interface{} `json:"CombatPower"`
+	Exp             int64       `json:"Exp"`
+	Gap             int64       `json:"Gap"`
+	GuildName       interface{} `json:"GuildName"`
+	IsSearchTarget  bool        `json:"IsSearchTarget"`
+	JobDetail       int64       `json:"JobDetail"`
+	JobID           int64       `json:"JobID"`
+	JobName         string      `json:"JobName"`
+	LegionLevel     int64       `json:"LegionLevel"`
+	Level           int64       `json:"Level"`
+	MatchSN         interface{} `json:"MatchSN"`
+	Percentile      interface{} `json:"Percentile"`
+	PetImgURL       string      `json:"PetImgUrl"`
+	RaidPower       int64       `json:"RaidPower"`
+	Rank            int64       `json:"Rank"`
+	Score           interface{} `json:"Score"`
+	SeasonNo        int64       `json:"SeasonNo"`
+	Stage           int64       `json:"Stage"`
+	StarSum         int64       `json:"StarSum"`
+	StartRank       int64       `json:"StartRank"`
+	TierName        string      `json:"TierName"`
+	TimeSum         int64       `json:"TimeSum"`
+	TranferStatus   int64       `json:"TranferStatus"`
+	WorldID         int64       `json:"WorldID"`
+	WorldName       string      `json:"WorldName"`
+}
+
+type CharInfoResult struct {
+	imageURL, info string
+}
+
 var checkNumberOfTimes map[int]int
 var charactersCatch map[string]CharInfoResult
 var charactersLevelRank map[string]string
 var catchTime int
 var classLevelRank map[string]string
+
+func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
+	name = strings.TrimSpace(name)
+	resetCacheEveryday()
+
+	if checkNumberOfTimes[gropFromQQ] >= 12 {
+		return CharInfoResult{"", "今日查询已达上限"}
+	}
+
+	// map缓存查找
+	if chara, ok := charactersCatch[name]; ok {
+		checkNumberOfTimes[gropFromQQ]++
+		return chara
+	}
+
+	jobURL := "https://maplestory.nexon.net/api/ranking?id=job&id2=&rebootIndex=0&page_index=1&character_name=" + name
+	body, err := webGetRequest(jobURL)
+	if err != nil {
+		return CharInfoResult{"", "查询失败"}
+	}
+
+	rankInfo := OfficialJobRank{}
+	json.Unmarshal(body, &rankInfo)
+	if len(rankInfo) == 0 {
+		return CharInfoResult{"", "无此角色"}
+	}
+
+	result.imageURL = rankInfo[0].CharacterImgURL
+	outName := strconv.QuoteToASCII(rankInfo[0].CharacterName)
+	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverName2Chinese[rankInfo[0].WorldName] + "）\n"
+	exp := float64(rankInfo[0].Exp) / float64(LevelExp[rankInfo[0].Level]) * 100
+	result.info += fmt.Sprintf("等级:%v - %.2f%% \n", rankInfo[0].Level, exp)
+
+	rRankInfo := OfficialJobRank{}
+	var jobName = fmt.Sprintf("%v%v", rankInfo[0].JobName, rankInfo[0].JobDetail)
+	if jName, ok := class2Chinese[jobName]; ok {
+		jobName = jName
+	}
+	if rankInfo[0].Level > 219 {
+		var rRankURL = "https://maplestory.nexon.net/api/ranking?id=job&id2=&rebootIndex=2&page_index=1&character_name=" + name
+		if rankInfo[0].WorldID == 45 {
+			rRankURL = "https://maplestory.nexon.net/api/ranking?id=job&id2=&rebootIndex=1&page_index=1&character_name=" + name
+		}
+
+		body, err := webGetRequest(rRankURL)
+		if err != nil {
+			result.info += fmt.Sprintf("职业:%v（全排%v）\n\n", jobName, rankInfo[0].Rank)
+		} else {
+			json.Unmarshal(body, &rRankInfo)
+			if len(rRankInfo) == 0 {
+				result.info += fmt.Sprintf("职业:%v（全排%v）\n\n", jobName, rankInfo[0].Rank)
+			} else {
+				result.info += fmt.Sprintf("职业:%v（单排%v 全排%v）\n\n", jobName, rRankInfo[0].Rank, rankInfo[0].Rank)
+			}
+		}
+	} else {
+		result.info += fmt.Sprintf("职业:%v（全排%v）\n\n", jobName, rankInfo[0].Rank)
+	}
+
+	legionURL := "https://maplestory.nexon.net/api/ranking?id=legion&id2=" + fmt.Sprintf("%v", rankInfo[0].WorldID) + "&page_index=1&character_name=" + name
+	legionByte, _ := webGetRequest(legionURL)
+	legion := OfficialLegionRank{}
+
+	if err := json.Unmarshal(legionByte, &legion); err == nil && len(legion) > 0 {
+		result.info += fmt.Sprintf("联盟等级:%v（排名%v）\n", legion[0].LegionLevel, legion[0].Rank)
+		result.info += fmt.Sprintf("联盟战斗力:%v（每日%.0f币）\n", legion[0].RaidPower, float64(legion[0].RaidPower)/1157407.41)
+
+		var legionCoinCap = 200
+		switch {
+		case legion[0].LegionLevel >= 8000:
+			legionCoinCap = 700
+		case legion[0].LegionLevel >= 5500:
+			legionCoinCap = 500
+		case legion[0].LegionLevel >= 3000:
+			legionCoinCap = 300
+		}
+		result.info += fmt.Sprintf("联盟币上限:%v\n", legionCoinCap)
+	}
+
+	// 保存数据进缓存
+	checkNumberOfTimes[gropFromQQ]++
+	//charactersLevelRank[strconv.Itoa(rankInfo[0].)] = name
+	if rankInfo[0].Level > 219 && rankInfo[0].WorldID == 45 { // R
+		jobWithRank := fmt.Sprintf("%v%v", rRankInfo[0].JobName, rRankInfo[0].Rank)
+		classLevelRank[jobWithRank] = rankInfo[0].CharacterName
+	}
+	charactersCatch[name] = result
+	return result
+}
 
 func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	name = strings.TrimSpace(name)
@@ -112,9 +264,9 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
-	//map缓存查找
+	// map缓存查找
 	if chara, ok := charactersCatch[name]; ok {
-		checkNumberOfTimes[gropFromQQ] += 1
+		checkNumberOfTimes[gropFromQQ]++
 		return chara
 	}
 
@@ -130,21 +282,15 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	}
 
 	if mapleInfo.Message == "Unable to find character" {
-		//查询的角色不存在
-		checkNumberOfTimes[gropFromQQ] += 1
+		// 查询的角色不存在
+		checkNumberOfTimes[gropFromQQ]++
 		charactersCatch[name] = CharInfoResult{"", "查询的角色不存在"}
 		return charactersCatch[name]
 	}
 
-	serverAbbr := make(map[string]string)
-	serverAbbr["Reboot (NA)"] = "R区"
-	serverAbbr["Aurora"] = "A区"
-	serverAbbr["Bera"] = "B区"
-	serverAbbr["Scania"] = "S区"
-
-	result.imageUrl = mapleInfo.CharacterImageURL
+	result.imageURL = mapleInfo.CharacterImageURL
 	outName := strconv.QuoteToASCII(mapleInfo.Name)
-	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverAbbr[mapleInfo.Server] + "）\n"
+	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverName2Chinese[mapleInfo.Server] + "）\n"
 	result.info += fmt.Sprintf("等级:%v - %v%% （排名%v）\n", mapleInfo.Level, mapleInfo.EXPPercent, mapleInfo.ServerRank)
 	if mapleInfo.ServerClassRanking > 0 {
 		result.info += fmt.Sprintf("职业:%v（排名%v）\n\n", mapleInfo.Class, mapleInfo.ServerClassRanking)
@@ -177,44 +323,65 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		var day float64
 		var dayOne float64
 		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(9652268252132-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
+			day = float64(dateLen-1) * float64(TotalExp250-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
 			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(9652268252132-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+				dayOne = float64(TotalExp250-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
 			}
 		}
-		if 0 < day && day < 2500 && 0 < dayOne && dayOne < 2500 {
+		if 0 < day && day < 2000 && 0 < dayOne && dayOne < 2000 {
 			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到250级！\n", dayOne)
 			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到250级！", dateLen-1, day)
 		} else {
-			result.info += fmt.Sprintf("这辈子没希望肝到250了~")
+			result.info += "这辈子没希望肝到250了~"
 		}
 	} else if mapleInfo.Level < 275 {
 		var day float64
 		var dayOne float64
 		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(86471480104001-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
+			day = float64(dateLen-1) * float64(TotalExp275-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
 			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(86471480104001-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+				dayOne = float64(TotalExp275-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
 			}
 		}
-		if 0 < day && day < 2500 && 0 < dayOne && dayOne < 2500 {
+		if 0 < day && day < 3000 && 0 < dayOne && dayOne < 3000 {
 			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到275级！\n", dayOne)
 			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到275级！", dateLen-1, day)
-		} else if 0 < dayOne && dayOne < 2500 {
+		} else if 0 < dayOne && dayOne < 3000 {
 			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到275级！", dayOne)
-		} else if 0 < day && day < 2500 {
+		} else if 0 < day && day < 3000 {
 			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到275级！", dateLen-1, day)
 		} else {
-			result.info += fmt.Sprintf("这辈子没希望肝到275了~")
+			result.info += "这辈子没希望肝到275了~"
+		}
+	} else if mapleInfo.Level < 300 {
+		var day float64
+		var dayOne float64
+		if dateLen > 1 {
+			avg := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[0].TotalOverallEXP)
+			day = float64(dateLen-1) * float64(TotalExp300-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / avg
+			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
+				dayOne = float64(TotalExp300-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+			}
+		}
+		switch {
+		case 0 < day && day < 10000 && 0 < dayOne && dayOne < 10000:
+			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到300级！\n", dayOne)
+			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到300级！", dateLen-1, day)
+		case 0 < dayOne && dayOne < 10000:
+			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到300级！", dayOne)
+		case 0 < day && day < 10000:
+			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到300级！", dateLen-1, day)
+		default:
+			result.info += "这辈子没希望肝到300了~"
 		}
 	} else {
-		result.info += fmt.Sprintf("大佬啊~ 带我打Boss！ 我混车超稳的！")
+		result.info += "大佬啊~ 带我打Boss！ 我混车超稳的！"
 	}
 
 	fmt.Println(result.info)
 
 	// 保存数据进缓存
-	checkNumberOfTimes[gropFromQQ] += 1
+	checkNumberOfTimes[gropFromQQ]++
 	charactersLevelRank[strconv.Itoa(mapleInfo.ServerRank)] = name
 	if (mapleInfo.Class != "Thief" && mapleInfo.Class != "Dual Blade") || mapleInfo.ServerClassRanking != 0 {
 		classAndRank := mapleInfo.Class + strconv.Itoa(mapleInfo.ServerClassRanking)
@@ -227,32 +394,10 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	return
 }
 
-func QueryWorldRanking(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-	level, err := strconv.Atoi(groupMessage)
-	if err != nil {
-		var num zh.Uint64
-		_, err := fmt.Sscan(groupMessage, &num)
-		if err != nil {
-			return true
-		}
-		level = int(num)
-		groupMessage = strconv.Itoa(level)
-	}
-
-	character := QueryRanking(groupMessage, fromQQ, "https://maplestory.nexon.net/rankings/world-ranking/reboot-(na)?rebootIndex=0&pageIndex=")
-	if character.imageUrl == "" {
-		SendGroupMsg(loginQQ, fromGroup, character.info)
-	} else {
-		imageUrl := GetGroupImage(loginQQ, fromGroup, 2, character.imageUrl)
-		SendGroupMsg(loginQQ, fromGroup, imageUrl+"\n"+character.info)
-	}
-	return true
-}
-
-func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result CharInfoResult) {
+func QueryClassRanking(rankNumber string, groupFromQQ int, url string) (result CharInfoResult) {
 	resetCacheEveryday()
 
-	if checkNumberOfTimes[gropFromQQ] >= 12 {
+	if checkNumberOfTimes[groupFromQQ] >= 12 {
 		return CharInfoResult{"", "今日查询已达上限"}
 	}
 
@@ -294,14 +439,13 @@ func QueryClassRanking(rankNumber string, gropFromQQ int, url string) (result Ch
 		return CharInfoResult{"", "查询失败:ReadAll获取失败"}
 	}
 
-	var officialRank OfficialRank
+	var officialRank OfficialWorldRank
 	err = json.Unmarshal(body, &officialRank)
-	if err != nil || len(officialRank) <= 0 {
+	if err != nil || len(officialRank) == 0 {
 		return CharInfoResult{"", "查询失败:json解析失败"}
 	}
 
-	//fmt.Println(officialRank)
-	return CheckMapleGG(officialRank[0].CharacterName, gropFromQQ)
+	return CheckOfficialRank(officialRank[0].CharacterName, groupFromQQ)
 }
 
 func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInfoResult) {
@@ -315,7 +459,7 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInf
 		return charactersCatch[characterName]
 	}
 
-	request, err := http.NewRequest(http.MethodGet, url, nil)
+	request, err := http.NewRequest(http.MethodGet, url+rankNumber, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -335,7 +479,7 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInf
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	ss := doc.Find(".ranking-container table tbody tr td").Eq(2)
@@ -346,7 +490,7 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInf
 	characterName := strings.TrimSpace(ss.Text())
 	fmt.Println("characterName:" + characterName)
 
-	return CheckMapleGG(characterName, gropFromQQ)
+	return CheckOfficialRank(characterName, gropFromQQ)
 }
 
 func resetCacheEveryday() {
@@ -364,64 +508,17 @@ func resetCacheEveryday() {
 }
 
 func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
-
 	generalNameCreate := func(names []string) (result []string) {
 		for index, name := range names {
 			if index == 0 {
-				result = append(result, strings.ToLower(name)+"排名")
 				result = append(result, strings.ToLower(name)+"第")
 			}
-			result = append(result, name+"排名")
 			result = append(result, name+"第")
 		}
 		return
 	}
 
-	AllClass := []struct {
-		Names []string
-	}{
-		{[]string{"联盟"}},
-		{[]string{"Warrior", "战士", "英雄", "黑骑", "圣骑"}},
-		{[]string{"Magician", "法师", "冰雷", "火毒", "主教"}},
-		{[]string{"Bowman", "弓手", "弓箭手", "神射手", "神射", "弩手"}},
-		{[]string{"Thief", "飞侠", "双刀", "刀飞", "标飞"}},
-		{[]string{"Pirate", "海盗", "船长", "队长", "火炮"}},
-		{[]string{"Aran", "战神"}},
-		{[]string{"Evan", "龙神"}},
-		{[]string{"Mercedes", "双弩"}},
-		{[]string{"Phantom", "幻影"}},
-		{[]string{"Jett", "杰特"}},
-		{[]string{"Mihile", "米哈尔", "米哈哈"}},
-		{[]string{"Luminous", "夜光", "夜光法师"}},
-		{[]string{"Kaiser", "凯撒", "狂龙"}},
-		{[]string{"Angelic Buster", "天使", "ab", "AB"}},
-		{[]string{"Hayato", "剑豪"}},
-		{[]string{"Kanna", "阴阳师", "娜神"}},
-		{[]string{"Xenon", "煎饼", "尖兵"}},
-		{[]string{"Zero", "神之子", "神子"}},
-		{[]string{"Beast Tamer", "BT", "bt", "林志玲", "林之灵", "lzl"}},
-		{[]string{"Shade", "隐月"}},
-		{[]string{"Kinesis", "超能"}},
-		{[]string{"Blaster", "爆破", "爆破者"}},
-		{[]string{"Cadena", "卡姐", "卡德娜"}},
-		{[]string{"Illium", "黑皮", "圣经使徒", "圣晶使徒"}},
-		{[]string{"Ark", "牙科", "亚克"}},
-		{[]string{"Pathfinder", "pf", "开拓者", "古迹猎人", "PF"}},
-		{[]string{"Hoyoung", "虎影"}},
-		{[]string{"Adele", "阿呆", "阿黛尔"}},
-		{[]string{"Dawn Warrior", "dw", "DW", "魂骑"}},
-		{[]string{"Blaze Wizard", "BW", "bw", "炎术士"}},
-		{[]string{"Wind Archer", "WA", "wa", "风铃"}},
-		{[]string{"Night Walker", "NW", "nw", "夜行", "夜行者"}},
-		{[]string{"Thunder Breaker", "TB", "tb", "奇袭", "奇袭者"}},
-		{[]string{"Demon Slayer", "DS", "ds", "红毛"}},
-		{[]string{"Battle Mage", "BM", "bm", "战法"}},
-		{[]string{"Wild Hunter", "WH", "wh", "豹弩"}},
-		{[]string{"Mechanicr", "轮椅", "机械"}},
-		{[]string{"Demon Avenger", "白毛", "DA"}},
-	}
-
-	//查询排名
+	// 查询职业排名
 	for _, class := range AllClass {
 		groupMessage, ok := IsPrefix(groupMessage, generalNameCreate(class.Names)...)
 		if ok {
@@ -442,24 +539,21 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 			if level > 10000 {
 				return true
 			}
-			character := QueryClassRanking(class.Names[0]+groupMessage, fromQQ, classUrl[class.Names[0]]+groupMessage)
-			if character.imageUrl == "" {
+			character := QueryClassRanking(class.Names[0]+groupMessage, fromQQ, classURL[class.Names[0]]+groupMessage)
+			if character.imageURL == "" {
 				SendGroupMsg(loginQQ, fromGroup, character.info)
 			} else {
-				imageUrl := GetGroupImage(loginQQ, fromGroup, 2, character.imageUrl)
-				SendGroupMsg(loginQQ, fromGroup, imageUrl+"\n"+character.info)
+				imageURL := GetGroupImage(loginQQ, fromGroup, 2, character.imageURL)
+				SendGroupMsg(loginQQ, fromGroup, imageURL+"\n"+character.info)
 			}
 			return true
 		}
 	}
 
-	//查询我
+	// 查询我
 	if groupMessage == "me" || groupMessage == "wo" || groupMessage == "我" {
 		user := QQBindCharacter{QQ: fromQQ}
-		//gdb.Delete(user)
-		//gdb.Create(user)
 		result := gdb.First(&user, "QQ = ?", fromQQ)
-
 		if result.RowsAffected > 0 {
 			groupMessage = user.Character
 		} else {
@@ -467,20 +561,19 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		}
 	}
 
-	//查询{角色名}
+	// 查询{角色名}
 	for _, v := range groupMessage {
 		if unicode.Is(unicode.Han, v) {
 			return false
 		}
 	}
-	character := CheckMapleGG(groupMessage, fromQQ)
-	if character.imageUrl == "" {
+	character := CheckOfficialRank(groupMessage, fromQQ)
+	if character.imageURL == "" {
 		SendGroupMsg(loginQQ, fromGroup, character.info)
 	} else {
-		imageUrl := GetGroupImage(loginQQ, fromGroup, 2, character.imageUrl)
-		SendGroupMsg(loginQQ, fromGroup, imageUrl+"\n"+character.info)
+		imageURL := GetGroupImage(loginQQ, fromGroup, 2, character.imageURL)
+		SendGroupMsg(loginQQ, fromGroup, imageURL+"\n"+character.info)
 	}
-
 	return true
 }
 
@@ -490,16 +583,15 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 			return false
 		}
 	}
-
-	//gdb.AutoMigrate(&QQBindCharacter{})
-
+	groupMessage = strings.ToLower(groupMessage) // 角色名无视大小写，全部小写录入可锁定角色,防止大小写不同重复录入
+	_ = gdb.AutoMigrate(&QQBindCharacter{})
 	user := QQBindCharacter{QQ: fromQQ}
-	groupMessage = strings.ToLower(groupMessage) //角色名无视大小写，全部小写录入可锁定角色,防止大小写不同重复录入
 
-	//角色名拆失败
+	// 角色名拆失败
 	if gdb.First(&user, "(character = ? OR qq = ?) AND lock = true ", groupMessage).RowsAffected == 0 {
-		//更新数据库
+		// 更新数据库
 		if gdb.Model(user).Update("Character", groupMessage).RowsAffected == 0 {
+			user.Character = groupMessage
 			gdb.Create(&user)
 		}
 		SendGroupMsg(loginQQ, fromGroup, "绑定成功")
@@ -507,6 +599,5 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		SendGroupMsg(loginQQ, fromGroup, "绑定失败")
 		return true
 	}
-
 	return true
 }

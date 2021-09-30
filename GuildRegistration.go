@@ -78,7 +78,6 @@ func GuildCheck(loginQQ, fromGroup, fromQQ int, groupMessage string) (result int
 }
 
 func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persons []person, personsMap map[int]int) {
-
 	persons = make([]person, 0, 30)
 	personsMap = make(map[int]int)
 
@@ -121,11 +120,9 @@ func guildThisWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 	})
 
 	return
-
 }
 
 func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (sumScore int, persons []person, personsMap map[int]int) {
-
 	persons = make([]person, 0, 30)
 	personsMap = make(map[int]int)
 
@@ -172,7 +169,6 @@ func guildLastWeek(loginQQ, fromGroup, fromQQ int, weekNumber time.Duration) (su
 }
 
 func guildFlagRaceQuery(loginQQ, fromGroup, fromQQ int, dt1, dt2 string) (sumScore int, persons []person, personsMap map[int]int) {
-
 	persons = make([]person, 0, 30)
 	personsMap = make(map[int]int)
 

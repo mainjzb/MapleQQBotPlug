@@ -105,6 +105,9 @@ func test() {
 	//ok, _ := cas.Enforce(698931513, 212427942, service.QA, "write")
 	//service.DeleteLevel(698931513, 212427942, 123456)
 	//fmt.Println(ok)
+	//QueryRanking("Foxitis",1)
+	//CheckClassRank(1, 1, 1, "幻影第9")
+	CheckMaplestoryInfo()
 }
 
 func main() {
@@ -134,14 +137,13 @@ func main() {
 	for {
 		m, err := ws.Read(msg)
 		if err != nil {
-
 			logrus.Error(err)
 			continue
 		}
 
 		if string(msg[:m]) == "NewEvent" {
 			client := &http.Client{}
-			//post要提交的数据
+			// post要提交的数据
 			DataUrlVal := url.Values{}
 			for key, val := range Data {
 				DataUrlVal.Add(key, val)
@@ -150,13 +152,13 @@ func main() {
 			if err != nil {
 				return
 			}
-			//提交请求
+			// 提交请求
 			resp, err := client.Do(req)
 			if err != nil {
 				logrus.Error(err)
 				continue
 			}
-			//读取返回值
+			// 读取返回值
 			resultByte, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				logrus.Error(err)
@@ -171,7 +173,6 @@ func main() {
 			//resultString := string(resultByte)
 			jsonList := bytes.Split(resultByte, []byte("\r"))
 			for _, jsonText := range jsonList {
-
 				if len(string(jsonText)) > 5 {
 					var message QQMessage
 
@@ -210,11 +211,8 @@ func main() {
 					fmt.Println("jsontestt:" + string(jsonText))
 				}
 			}
-
 		}
-
 	}
-
 }
 
 func init() {
@@ -247,48 +245,6 @@ func init() {
 			logrus.SetOutput(os.Stdout)
 			logrus.Error(err)
 		}*/
-
-	classUrl = map[string]string{
-		"Warrior":         "https://maplestory.nexon.net/api/ranking?id=job&id2=1&rebootIndex=1&page_index=",
-		"Magician":        "https://maplestory.nexon.net/api/ranking?id=job&id2=2&rebootIndex=1&page_index=",
-		"Bowman":          "https://maplestory.nexon.net/api/ranking?id=job&id2=3&rebootIndex=1&page_index=",
-		"Thief":           "https://maplestory.nexon.net/api/ranking?id=job&id2=4&rebootIndex=1&page_index=",
-		"Pirate":          "https://maplestory.nexon.net/api/ranking?id=job&id2=5&rebootIndex=1&page_index=",
-		"Aran":            "https://maplestory.nexon.net/api/ranking?id=job&id2=20&rebootIndex=1&page_index=",
-		"Evan":            "https://maplestory.nexon.net/api/ranking?id=job&id2=22&rebootIndex=1&page_index=",
-		"Mercedes":        "https://maplestory.nexon.net/api/ranking?id=job&id2=23&rebootIndex=1&page_index=",
-		"Phantom":         "https://maplestory.nexon.net/api/ranking?id=job&id2=24&rebootIndex=1&page_index=",
-		"Jett":            "https://maplestory.nexon.net/api/ranking?id=job&id2=201&rebootIndex=1&page_index=",
-		"Mihile":          "https://maplestory.nexon.net/api/ranking?id=job&id2=202&rebootIndex=1&page_index=",
-		"Luminous":        "https://maplestory.nexon.net/api/ranking?id=job&id2=203&rebootIndex=1&page_index=",
-		"Kaiser":          "https://maplestory.nexon.net/api/ranking?id=job&id2=204&rebootIndex=1&page_index=",
-		"Angelic Buster":  "https://maplestory.nexon.net/api/ranking?id=job&id2=205&rebootIndex=1&page_index=",
-		"Hayato":          "https://maplestory.nexon.net/api/ranking?id=job&id2=206&rebootIndex=1&page_index=",
-		"Kanna":           "https://maplestory.nexon.net/api/ranking?id=job&id2=207&rebootIndex=1&page_index=",
-		"Xenon":           "https://maplestory.nexon.net/api/ranking?id=job&id2=208rebootIndex=1&page_index=",
-		"Zero":            "https://maplestory.nexon.net/api/ranking?id=job&id2=210&rebootIndex=1&page_index=",
-		"Beast Tamer":     "https://maplestory.nexon.net/api/ranking?id=job&id2=211&rebootIndex=1&page_index=",
-		"Shade":           "https://maplestory.nexon.net/api/ranking?id=job&id2=212&rebootIndex=1&page_index=",
-		"Kinesis":         "https://maplestory.nexon.net/api/ranking?id=job&id2=214&rebootIndex=1&page_index=",
-		"Blaster":         "https://maplestory.nexon.net/api/ranking?id=job&id2=215&rebootIndex=1&page_index=",
-		"Cadena":          "https://maplestory.nexon.net/api/ranking?id=job&id2=216&rebootIndex=1&page_index=",
-		"Illium":          "https://maplestory.nexon.net/api/ranking?id=job&id2=217&rebootIndex=1&page_index=",
-		"Ark":             "https://maplestory.nexon.net/api/ranking?id=job&id2=218&rebootIndex=1&page_index=",
-		"Pathfinder":      "https://maplestory.nexon.net/api/ranking?id=job&id2=219&rebootIndex=1&page_index=",
-		"Hoyoung":         "https://maplestory.nexon.net/api/ranking?id=job&id2=220&rebootIndex=1&page_index=",
-		"Adele":           "https://maplestory.nexon.net/api/ranking?id=job&id2=221&rebootIndex=1&page_index=",
-		"Dawn Warrior":    "https://maplestory.nexon.net/api/ranking?id=job&id2=11&rebootIndex=1&page_index=",
-		"Blaze Wizard":    "https://maplestory.nexon.net/api/ranking?id=job&id2=12&rebootIndex=1&page_index=",
-		"Wind Archer":     "https://maplestory.nexon.net/api/ranking?id=job&id2=13&rebootIndex=1&page_index=",
-		"Night Walker":    "https://maplestory.nexon.net/api/ranking?id=job&id2=14&rebootIndex=1&page_index=",
-		"Thunder Breaker": "https://maplestory.nexon.net/api/ranking?id=job&id2=15&rebootIndex=1&page_index=",
-		"Demon Slayer":    "https://maplestory.nexon.net/api/ranking?id=job&id2=31&rebootIndex=1&page_index=",
-		"Battle Mage":     "https://maplestory.nexon.net/api/ranking?id=job&id2=32&rebootIndex=1&page_index=",
-		"Wild Hunter":     "https://maplestory.nexon.net/api/ranking?id=job&id2=33&rebootIndex=1&page_index=",
-		"Mechanicr":       "https://maplestory.nexon.net/api/ranking?id=job&id2=34&rebootIndex=1&page_index=",
-		"Demon Avenger":   "https://maplestory.nexon.net/api/ranking?id=job&id2=209&rebootIndex=1&page_index=",
-		"联盟":              "https://maplestory.nexon.net/api/ranking?id=legion&id2=45&page_index=",
-	}
 
 	//// 初始化数据库
 
@@ -395,7 +351,6 @@ func GetMaplestoryMaintainInfo(loginQQ, fromGroup, fromQQ int, groupMessage stri
 
 //查询官网信息
 func CheckMaplestoryInfo() {
-
 	var content string
 	for {
 		//cqp.AddLog(cqp.Info,"查询官网更新","info")
@@ -413,15 +368,16 @@ func CheckMaplestoryInfo() {
 			continue
 		}
 		doc.Find(".news-container li").First().Each(func(i int, s *goquery.Selection) {
-			fmt.Println(i)
-			// For each item found, get the band and titl
-
 			band, ok := s.Find(".text h3 a").Attr("href")
-			band = "http://maplestory.nexon.net/" + band
+			band = "https://maplestory.nexon.net" + band
 			//title := s.Find("i").Text()
 			if ok {
 				if content == "" {
 					content = band
+					for _, v := range config.Instance.OfficialNoticeQQGroup {
+						SendGroupMsg(loginQQ, v, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
+						SendGroupMsg(loginQQ, v, content)
+					}
 				} else if content != band {
 					content = band
 
@@ -472,7 +428,6 @@ func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 		{QueryContainQuestion, []string{"模糊查询问题", "模糊搜索问题"}},
 		{QueryQuestion, []string{"文本查询问题"}},
 		{DeleteAnswer, []string{"删除答案", "删除问题"}},
-		{QueryWorldRanking, []string{"查询排名", "查询第", "查询等级第"}},
 		{bindCharacter, []string{"查询绑定", "绑定查询", "绑定"}},
 		{CheckClassRank, []string{"查询"}},
 		{AddQuestion, []string{"问"}},

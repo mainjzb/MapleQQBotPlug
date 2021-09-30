@@ -83,19 +83,18 @@ func Sendprivatemsg(LoginQQ, toQQ int, text string) {
 	defer resp.Body.Close()
 }
 
-func SendGroupMsg(LoginQQ, formGrop int, text string) {
-
-	apiUrl := "http://127.0.0.1:10429"
+func SendGroupMsg(LoginQQ, formGroup int, text string) {
+	apiURL := "http://127.0.0.1:10429"
 	resource := "/sendgroupmsg"
 	data := url.Values{}
 	data.Set("fromqq", strconv.Itoa(LoginQQ))
-	data.Set("togroup", strconv.Itoa(formGrop))
+	data.Set("togroup", strconv.Itoa(formGroup))
 	data.Set("text", text)
 
 	dateCover := data.Encode()
 	dateCover = strings.ReplaceAll(dateCover, "+", "%20")
 
-	u, _ := url.ParseRequestURI(apiUrl)
+	u, _ := url.ParseRequestURI(apiURL)
 	u.Path = resource
 	urlStr := u.String() // "https://api.com/user/"
 	fmt.Println(u.String())
@@ -116,7 +115,7 @@ func SendGroupMsg(LoginQQ, formGrop int, text string) {
 }
 
 func GetGropCard(LoginQQ, formGrop, toQQ int) string {
-	apiUrl := "http://127.0.0.1:10429"
+	apiURL := "http://127.0.0.1:10429"
 	resource := "/getgroupcard"
 	data := url.Values{}
 	data.Set("fromqq", strconv.Itoa(LoginQQ))
@@ -126,7 +125,7 @@ func GetGropCard(LoginQQ, formGrop, toQQ int) string {
 	dateCover := data.Encode()
 	dateCover = strings.ReplaceAll(dateCover, "+", "%20")
 
-	u, _ := url.ParseRequestURI(apiUrl)
+	u, _ := url.ParseRequestURI(apiURL)
 	u.Path = resource
 	urlStr := u.String() // "https://api.com/user/"
 	fmt.Println(u.String())
@@ -227,11 +226,11 @@ func Allocsession() int {
 	return sess.SessionID
 }
 
-func GetGroupImage(LoginQQ, formGrop, fromtype int, ImagePath string) string {
-	apiUrl := "http://127.0.0.1:10429"
+func GetGroupImage(loginQQ, formGrop, fromtype int, ImagePath string) string {
+	apiURL := "http://127.0.0.1:10429"
 	resource := "/sendgrouppic"
 	data := url.Values{}
-	data.Set("fromqq", strconv.Itoa(LoginQQ))
+	data.Set("fromqq", strconv.Itoa(loginQQ))
 	data.Set("togroup", strconv.Itoa(formGrop))
 	if fromtype == 2 {
 		// 网络图片
@@ -246,7 +245,7 @@ func GetGroupImage(LoginQQ, formGrop, fromtype int, ImagePath string) string {
 	dateCover := data.Encode()
 	dateCover = strings.ReplaceAll(dateCover, "+", "%20")
 
-	u, _ := url.ParseRequestURI(apiUrl)
+	u, _ := url.ParseRequestURI(apiURL)
 	u.Path = resource
 	urlStr := u.String() // "https://api.com/user/"
 	fmt.Println(u.String())
@@ -275,19 +274,19 @@ func GetGroupImage(LoginQQ, formGrop, fromtype int, ImagePath string) string {
 	return card.Ret
 }
 
-func GetPhotoUrl(LoginQQ, formGrop int, pic string) string {
-	apiUrl := "http://127.0.0.1:10429"
+func GetPhotoURL(loginQQ, formGrop int, pic string) string {
+	apiURL := "http://127.0.0.1:10429"
 	resource := "/getphotourl"
 
 	data := url.Values{}
-	data.Set("fromqq", strconv.Itoa(LoginQQ))
+	data.Set("fromqq", strconv.Itoa(loginQQ))
 	data.Set("group", strconv.Itoa(formGrop))
 	data.Set("photo", pic)
 
 	dateCover := data.Encode()
 	dateCover = strings.ReplaceAll(dateCover, "+", "%20")
 
-	u, _ := url.ParseRequestURI(apiUrl)
+	u, _ := url.ParseRequestURI(apiURL)
 	u.Path = resource
 	urlStr := u.String() // "https://api.com/user/"
 	fmt.Println(u.String())
@@ -352,9 +351,7 @@ func GetAllGroupList(LoginQQ int) []int {
 
 	newList := []int{}
 	for _, v := range goupList.List {
-
 		newList = append(newList, v.GIN)
-
 	}
 	return newList
 }

@@ -125,7 +125,7 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 
 	//2.2 下载图片存到本地
 	for _, picHash := range picList {
-		imagPath := GetPhotoUrl(loginQQ, fromGroup, picHash)
+		imagPath := GetPhotoURL(loginQQ, fromGroup, picHash)
 		dir, _ := os.Getwd()
 		name := picHash[:42] + ";time=" + strconv.FormatInt(time.Now().Unix(), 10) + "]"
 		pathName := dir + "\\" + config.Instance.ImageStorePath + "\\" + name

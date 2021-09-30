@@ -20,6 +20,12 @@ func webGetRequest(url string) (result []byte, err error) {
 	}
 
 	resp, err := client.Get(url)
+	urlHost := url
+	urlHost = strings.TrimPrefix(urlHost, "http://")
+	urlHost = strings.TrimPrefix(urlHost, "https://")
+	i := strings.Index(urlHost, "/")
+	urlHost = urlHost[:i]
+	resp.Header.Add("Host", urlHost)
 	if err != nil {
 		return nil, err
 	}
@@ -71,13 +77,7 @@ func IsEnglish(data string) bool {
 
 func IsBanQQ(qq int) bool {
 	user := QQBanList{QQ: qq}
-
-	//gdb.AutoMigrate(&QQBanList{})
-
+	gdb.AutoMigrate(&QQBanList{})
 	characterResult := gdb.First(&user, "qq = ?", qq)
-	if characterResult.RowsAffected > 0 {
-		return true
-	} else {
-		return false
-	}
+	return characterResult.RowsAffected > 0
 }
