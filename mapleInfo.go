@@ -1,10 +1,25 @@
 package main
 
-const (
-	TotalExp250 = 7764451421743
-	TotalExp275 = 84583665273612
-	TotalExp300 = 10103007996648098
-)
+var TotalExpCollection = []struct {
+	Level int64
+	Exp   int64
+}{
+	{210, 50192858013},
+	{220, 226834057694},
+	{230, 888805728115},
+	{240, 2780379685705},
+	{250, 7764451421743},
+	{255, 14465974056466},
+	{260, 21509339594499},
+	{265, 36314635528483},
+	{270, 51875150349788},
+	{275, 84583665273612},
+	{280, 166871327183154},
+	{285, 410235606102699},
+	{290, 1129981080450215},
+	{295, 3258615365414436},
+	{300, 10103007996648098},
+}
 
 var AllClass = []struct {
 	Names []string
@@ -50,6 +65,7 @@ var AllClass = []struct {
 	{[]string{"Mechanicr", "轮椅", "机械"}},
 	{[]string{"Demon Avenger", "白毛", "DA"}},
 	{[]string{"Kain", "卡因", "卡隐", "卡影"}},
+	{[]string{"Lara", "lara", "lala", "拉拉"}},
 }
 
 var classURL = map[string]string{
@@ -92,6 +108,7 @@ var classURL = map[string]string{
 	"Mechanicr":       "https://maplestory.nexon.net/api/ranking?id=job&id2=34&rebootIndex=1&page_index=",
 	"Demon Avenger":   "https://maplestory.nexon.net/api/ranking?id=job&id2=209&rebootIndex=1&page_index=",
 	"Kain":            "https://maplestory.nexon.net/api/ranking?id=job&id2=222&rebootIndex=1&page_index=",
+	"Lara":            "https://maplestory.nexon.net/api/ranking?id=job&id2=223&rebootIndex=1&page_index",
 	"联盟":              "https://maplestory.nexon.net/api/ranking?id=legion&id2=45&page_index=",
 	"等级":              "https://maplestory.nexon.net/api/ranking?id=world&id2=45&rebootIndex=0&page_index=",
 }
@@ -436,4 +453,5 @@ var serverName2Chinese = map[string]string{
 	"Aurora":      "A区",
 	"Bera":        "B区",
 	"Scania":      "S区",
+	"Elysium":     "E区",
 }

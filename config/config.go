@@ -9,15 +9,17 @@ import (
 var Instance *Config
 
 type Config struct {
-	MasterQQ              string `yaml:"MasterQQ"`
-	LoginQQ               int    `yaml:"LoginQQ"`
-	ImageStorePath        string `yaml:"ImageStorePath"`
-	LogFile               string `yaml:"LogFile"`
-	QQChatID              string `yaml:"QQChatID"`
-	QQChatKey             string `yaml:"QQChatKey"`
-	GuildFlagRaceQQGroup  []int  `yaml:"GuildFlagRaceQQGroup"`
-	OfficialNoticeQQGroup []int  `yaml:"OfficialNoticeQQGroup"`
-	QAEditQQGroup         []int  `yaml:"QAEditQQGroup"`
+	MasterQQ              string  `yaml:"MasterQQ"`
+	LoginQQ               int64   `yaml:"LoginQQ"`
+	ImageStorePath        string  `yaml:"ImageStorePath"`
+	LogFile               string  `yaml:"LogFile"`
+	QQChatID              string  `yaml:"QQChatID"`
+	QQChatKey             string  `yaml:"QQChatKey"`
+	GuildFlagRaceQQGroup  []int   `yaml:"GuildFlagRaceQQGroup"`
+	OfficialNoticeQQGroup []int64 `yaml:"OfficialNoticeQQGroup"`
+	QAEditQQGroup         []int   `yaml:"QAEditQQGroup"`
+	MVPMonitorGroups      []int64 `yaml:"MVPMonitorGroups"`
+	MVPNoticeGroups       []int64 `yaml:"MVPNoticeGroups"`
 }
 
 func Init(filename string) *Config {

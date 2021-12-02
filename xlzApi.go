@@ -109,6 +109,7 @@ func SendGroupMsg(LoginQQ, formGroup int, text string) {
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
 	defer resp.Body.Close()
 	//fmt.Println(resp.Status)
@@ -260,6 +261,7 @@ func GetGroupImage(loginQQ, formGrop, fromtype int, ImagePath string) string {
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
+		return ""
 	}
 	defer resp.Body.Close()
 

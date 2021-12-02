@@ -42,7 +42,7 @@ func NewCasbin(gdb *gorm.DB) *casbin.Enforcer {
 	xCasbin.SavePolicy()
 
 	for _, group := range config.Instance.QAEditQQGroup {
-		groupString := strconv.Itoa(group)
+		groupString := strconv.Itoa(int(group))
 		xCasbin.AddPolicy("admin2", groupString, QA, "write")
 		xCasbin.AddPolicy("admin2", groupString, QA, "read")
 

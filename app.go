@@ -106,8 +106,8 @@ func test() {
 	//service.DeleteLevel(698931513, 212427942, 123456)
 	//fmt.Println(ok)
 	//QueryRanking("Foxitis",1)
-	//CheckClassRank(1, 1, 1, "幻影第9")
-	CheckMaplestoryInfo()
+	//CheckClassRank(1, 1, 1, "Z3tton")
+	//CheckMaplestoryInfo()
 }
 
 func main() {
@@ -223,7 +223,7 @@ func init() {
 
 	//config
 	conf := config.Init(*configFile)
-	loginQQ = conf.LoginQQ
+	loginQQ = int(conf.LoginQQ)
 
 	// 初始化日志
 	writer, err := rotatelogs.New(
@@ -246,7 +246,7 @@ func init() {
 			logrus.Error(err)
 		}*/
 
-	//// 初始化数据库
+	// 初始化数据库
 
 	dir, _ := os.Getwd()
 	fmt.Println(dir)
@@ -351,39 +351,30 @@ func GetMaplestoryMaintainInfo(loginQQ, fromGroup, fromQQ int, groupMessage stri
 
 //查询官网信息
 func CheckMaplestoryInfo() {
-	var content string
+	var content = ""
 	for {
-		//cqp.AddLog(cqp.Info,"查询官网更新","info")
 		http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
 		resp, err := http.Get("http://maplestory.nexon.net/news/all")
 		if err != nil {
-			// handle error
-			//cqp.AddLog(cqp.Info,"查询官网更新","失败1")
 			continue
 		}
 
 		doc, err := goquery.NewDocumentFromReader(resp.Body)
 		if err != nil {
-			//cqp.AddLog(cqp.Info,"查询官网更新","失败2")
 			continue
 		}
 		doc.Find(".news-container li").First().Each(func(i int, s *goquery.Selection) {
 			band, ok := s.Find(".text h3 a").Attr("href")
 			band = "https://maplestory.nexon.net" + band
-			//title := s.Find("i").Text()
+			// title := s.Find("i").Text()
 			if ok {
 				if content == "" {
 					content = band
-					for _, v := range config.Instance.OfficialNoticeQQGroup {
-						SendGroupMsg(loginQQ, v, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
-						SendGroupMsg(loginQQ, v, content)
-					}
 				} else if content != band {
 					content = band
-
 					for _, v := range config.Instance.OfficialNoticeQQGroup {
-						SendGroupMsg(loginQQ, v, "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
-						SendGroupMsg(loginQQ, v, content)
+						SendGroupMsg(loginQQ, int(v), "停一下！ 都停一下！ 百科有话说！ 官网发布新内容了！")
+						SendGroupMsg(loginQQ, int(v), content)
 					}
 				}
 			}

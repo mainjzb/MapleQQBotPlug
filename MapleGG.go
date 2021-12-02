@@ -188,7 +188,10 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 	}
 
 	rankInfo := OfficialJobRank{}
-	json.Unmarshal(body, &rankInfo)
+	err = json.Unmarshal(body, &rankInfo)
+	if err != nil {
+		return CharInfoResult{"", "查询失败：网络错误"}
+	}
 	if len(rankInfo) == 0 {
 		return CharInfoResult{"", "无此角色"}
 	}
@@ -214,8 +217,8 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 		if err != nil {
 			result.info += fmt.Sprintf("职业:%v（全排%v）\n\n", jobName, rankInfo[0].Rank)
 		} else {
-			json.Unmarshal(body, &rRankInfo)
-			if len(rRankInfo) == 0 {
+			err = json.Unmarshal(body, &rRankInfo)
+			if err != nil || len(rRankInfo) == 0 {
 				result.info += fmt.Sprintf("职业:%v（全排%v）\n\n", jobName, rankInfo[0].Rank)
 			} else {
 				result.info += fmt.Sprintf("职业:%v（单排%v 全排%v）\n\n", jobName, rRankInfo[0].Rank, rankInfo[0].Rank)
@@ -228,7 +231,6 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 	legionURL := "https://maplestory.nexon.net/api/ranking?id=legion&id2=" + fmt.Sprintf("%v", rankInfo[0].WorldID) + "&page_index=1&character_name=" + name
 	legionByte, _ := webGetRequest(legionURL)
 	legion := OfficialLegionRank{}
-
 	if err := json.Unmarshal(legionByte, &legion); err == nil && len(legion) > 0 {
 		result.info += fmt.Sprintf("联盟等级:%v（排名%v）\n", legion[0].LegionLevel, legion[0].Rank)
 		result.info += fmt.Sprintf("联盟战斗力:%v（每日%.0f币）\n", legion[0].RaidPower, float64(legion[0].RaidPower)/1157407.41)
@@ -248,7 +250,7 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 	// 保存数据进缓存
 	checkNumberOfTimes[gropFromQQ]++
 	//charactersLevelRank[strconv.Itoa(rankInfo[0].)] = name
-	if rankInfo[0].Level > 219 && rankInfo[0].WorldID == 45 { // R
+	if rankInfo[0].Level > 219 && rankInfo[0].WorldID == 45 { // 大于219且在R区才有排名记录缓存
 		jobWithRank := fmt.Sprintf("%v%v", rRankInfo[0].JobName, rRankInfo[0].Rank)
 		classLevelRank[jobWithRank] = rankInfo[0].CharacterName
 	}
@@ -256,10 +258,12 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 	return result
 }
 
-func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
+func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	name = strings.TrimSpace(name)
+	if len(name) == 0 {
+		return CharInfoResult{"", "查询失败"}
+	}
 	resetCacheEveryday()
-
 	if checkNumberOfTimes[gropFromQQ] >= 12 {
 		return CharInfoResult{"", "今日查询已达上限"}
 	}
@@ -277,7 +281,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 
 	var mapleInfo MapleInfo
 	err = json.Unmarshal(body, &mapleInfo)
-	if err != nil {
+	if err != nil || len(mapleInfo.Name) == 0 {
 		return CharInfoResult{"", "查询失败2"}
 	}
 
@@ -288,6 +292,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		return charactersCatch[name]
 	}
 
+	result := CharInfoResult{}
 	result.imageURL = mapleInfo.CharacterImageURL
 	outName := strconv.QuoteToASCII(mapleInfo.Name)
 	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverName2Chinese[mapleInfo.Server] + "）\n"
@@ -303,8 +308,11 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	}
 	if mapleInfo.LegionLevel != 0 && mapleInfo.LegionRank != 0 && mapleInfo.LegionPower != 0 && mapleInfo.LegionCoinsPerDay != 0 {
 		result.info += fmt.Sprintf("联盟等级:%v（排名%v）\n", mapleInfo.LegionLevel, mapleInfo.LegionRank)
-		result.info += fmt.Sprintf("联盟战斗力:%v（每日%v币）\n", mapleInfo.LegionPower, mapleInfo.LegionCoinsPerDay)
-
+		if mapleInfo.LegionPower > 1000000 {
+			result.info += fmt.Sprintf("联盟战斗力:%vm（每日%v币）\n", mapleInfo.LegionPower/1000000, mapleInfo.LegionCoinsPerDay)
+		} else {
+			result.info += fmt.Sprintf("战五渣（每日%v币）\n", mapleInfo.LegionCoinsPerDay)
+		}
 		var legionCoinCap = 200
 		switch {
 		case mapleInfo.LegionLevel >= 8000:
@@ -318,66 +326,7 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 	}
 
 	result.info += "---------------------------------\n"
-	dateLen := len(mapleInfo.GraphData)
-	if mapleInfo.Level < 250 {
-		var day float64
-		var dayOne float64
-		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(TotalExp250-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
-			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(TotalExp250-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
-			}
-		}
-		if 0 < day && day < 2000 && 0 < dayOne && dayOne < 2000 {
-			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到250级！\n", dayOne)
-			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到250级！", dateLen-1, day)
-		} else {
-			result.info += "这辈子没希望肝到250了~"
-		}
-	} else if mapleInfo.Level < 275 {
-		var day float64
-		var dayOne float64
-		if dateLen > 1 {
-			day = float64(dateLen-1) * float64(TotalExp275-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[0].TotalOverallEXP)
-			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(TotalExp275-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
-			}
-		}
-		if 0 < day && day < 3000 && 0 < dayOne && dayOne < 3000 {
-			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到275级！\n", dayOne)
-			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到275级！", dateLen-1, day)
-		} else if 0 < dayOne && dayOne < 3000 {
-			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到275级！", dayOne)
-		} else if 0 < day && day < 3000 {
-			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到275级！", dateLen-1, day)
-		} else {
-			result.info += "这辈子没希望肝到275了~"
-		}
-	} else if mapleInfo.Level < 300 {
-		var day float64
-		var dayOne float64
-		if dateLen > 1 {
-			avg := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[0].TotalOverallEXP)
-			day = float64(dateLen-1) * float64(TotalExp300-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / avg
-			if float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP) != 0 {
-				dayOne = float64(TotalExp300-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP-mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
-			}
-		}
-		switch {
-		case 0 < day && day < 10000 && 0 < dayOne && dayOne < 10000:
-			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到300级！\n", dayOne)
-			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到300级！", dateLen-1, day)
-		case 0 < dayOne && dayOne < 10000:
-			result.info += fmt.Sprintf("按照最近1天的肝度！ 还有%.1f天就到300级！", dayOne)
-		case 0 < day && day < 10000:
-			result.info += fmt.Sprintf("按照最近%d天的肝度！ 还有%.1f天就到300级！", dateLen-1, day)
-		default:
-			result.info += "这辈子没希望肝到300了~"
-		}
-	} else {
-		result.info += "大佬啊~ 带我打Boss！ 我混车超稳的！"
-	}
-
+	result.info += calcExpDay(int64(mapleInfo.Level), mapleInfo)
 	fmt.Println(result.info)
 
 	// 保存数据进缓存
@@ -391,7 +340,47 @@ func CheckMapleGG(name string, gropFromQQ int) (result CharInfoResult) {
 		classLevelRank["联盟"+strconv.Itoa(mapleInfo.LegionRank)] = name
 	}
 	charactersCatch[name] = result
-	return
+	return result
+}
+
+func calcExpDay(level int64, mapleInfo MapleInfo) string {
+	if level == 300 {
+		return "大佬啊~ 带我打Boss！ 我混车超稳的！"
+	}
+
+	var totalExp int64
+	var nextLevel int64
+	for _, nextLevelExp := range TotalExpCollection {
+		if level < nextLevelExp.Level {
+			totalExp = nextLevelExp.Exp
+			nextLevel = nextLevelExp.Level
+			break
+		}
+	}
+
+	var day float64
+	var dayOne float64
+	dateLen := len(mapleInfo.GraphData)
+	if dateLen > 1 {
+		avgDayExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[0].TotalOverallEXP)
+		day = float64(dateLen-1) * float64(totalExp-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / avgDayExp
+		lastDayExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+		if lastDayExp != 0 {
+			dayOne = float64(totalExp-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / lastDayExp
+		}
+	}
+
+	switch {
+	case 0 < day && day < 10000 && 0 < dayOne && dayOne < 10000:
+		return fmt.Sprintf("参照最近1天还有%.1f天就到%d级！\n", dayOne, nextLevel) +
+			fmt.Sprintf("参照最近%d天还有%.1f天就到%d级！", dateLen-1, day, nextLevel)
+	case 0 < dayOne && dayOne < 10000:
+		return fmt.Sprintf("参照最近1天还有%.1f天就到%d级！", dayOne, nextLevel)
+	case 0 < day && day < 10000:
+		return fmt.Sprintf("参照最近%d天还有%.1f天就到%d级！", dateLen-1, day, nextLevel)
+	default:
+		return fmt.Sprintf("这辈子没希望肝到%d了~", nextLevel)
+	}
 }
 
 func QueryClassRanking(rankNumber string, groupFromQQ int, url string) (result CharInfoResult) {
@@ -445,7 +434,7 @@ func QueryClassRanking(rankNumber string, groupFromQQ int, url string) (result C
 		return CharInfoResult{"", "查询失败:json解析失败"}
 	}
 
-	return CheckOfficialRank(officialRank[0].CharacterName, groupFromQQ)
+	return CheckMapleGG(officialRank[0].CharacterName, groupFromQQ)
 }
 
 func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInfoResult) {
@@ -490,7 +479,7 @@ func QueryRanking(rankNumber string, gropFromQQ int, url string) (result CharInf
 	characterName := strings.TrimSpace(ss.Text())
 	fmt.Println("characterName:" + characterName)
 
-	return CheckOfficialRank(characterName, gropFromQQ)
+	return CheckMapleGG(characterName, gropFromQQ)
 }
 
 func resetCacheEveryday() {
@@ -567,7 +556,7 @@ func CheckClassRank(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 			return false
 		}
 	}
-	character := CheckOfficialRank(groupMessage, fromQQ)
+	character := CheckMapleGG(groupMessage, fromQQ)
 	if character.imageURL == "" {
 		SendGroupMsg(loginQQ, fromGroup, character.info)
 	} else {
@@ -583,6 +572,9 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 			return false
 		}
 	}
+	if len(groupMessage) == 0 {
+		return false
+	}
 	groupMessage = strings.ToLower(groupMessage) // 角色名无视大小写，全部小写录入可锁定角色,防止大小写不同重复录入
 	_ = gdb.AutoMigrate(&QQBindCharacter{})
 	user := QQBindCharacter{QQ: fromQQ}
@@ -597,7 +589,6 @@ func bindCharacter(loginQQ, fromGroup, fromQQ int, groupMessage string) bool {
 		SendGroupMsg(loginQQ, fromGroup, "绑定成功")
 	} else {
 		SendGroupMsg(loginQQ, fromGroup, "绑定失败")
-		return true
 	}
 	return true
 }

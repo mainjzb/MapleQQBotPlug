@@ -20,6 +20,9 @@ func webGetRequest(url string) (result []byte, err error) {
 	}
 
 	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
 	urlHost := url
 	urlHost = strings.TrimPrefix(urlHost, "http://")
 	urlHost = strings.TrimPrefix(urlHost, "https://")
