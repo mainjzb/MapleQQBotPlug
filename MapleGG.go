@@ -22,7 +22,46 @@ type QQBindCharacter struct {
 	QQ        int `gorm:"primarykey"`
 	Lock      bool
 }
-
+type MapleInfo2 struct {
+	Message       string        `json:"message"`
+	CharacterData CharacterData `json:"CharacterData"`
+}
+type CharacterData struct {
+	AchievementPoints int     `json:"AchievementPoints"`
+	AchievementRank   int     `json:"AchievementRank"`
+	CharacterImageURL string  `json:"CharacterImageURL"`
+	Class             string  `json:"Class"`
+	ClassRank         int     `json:"ClassRank"`
+	EXP               int64   `json:"EXP"`
+	EXPPercent        float64 `json:"EXPPercent"`
+	GlobalRanking     int     `json:"GlobalRanking"`
+	GraphData         []struct {
+		AvatarURL        string `json:"AvatarURL"`
+		ClassID          int    `json:"ClassID"`
+		ClassRankGroupID int    `json:"ClassRankGroupID"`
+		CurrentEXP       int64  `json:"CurrentEXP"`
+		DateLabel        string `json:"DateLabel"`
+		EXPDifference    int    `json:"EXPDifference"`
+		EXPToNextLevel   int64  `json:"EXPToNextLevel"`
+		ImportTime       int    `json:"ImportTime"`
+		Level            int    `json:"Level"`
+		Name             string `json:"Name"`
+		ServerID         int    `json:"ServerID"`
+		ServerMergeID    int    `json:"ServerMergeID"`
+		TotalOverallEXP  int64  `json:"TotalOverallEXP"`
+	} `json:"GraphData"`
+	Guild              string `json:"Guild"`
+	LegionCoinsPerDay  int    `json:"LegionCoinsPerDay"`
+	LegionLevel        int    `json:"LegionLevel"`
+	LegionPower        int    `json:"LegionPower"`
+	LegionRank         int    `json:"LegionRank"`
+	Level              int    `json:"Level"`
+	Name               string `json:"Name"`
+	Server             string `json:"Server"`
+	ServerClassRanking int    `json:"ServerClassRanking"`
+	ServerRank         int    `json:"ServerRank"`
+	ServerSlug         string `json:"ServerSlug"`
+}
 type MapleInfo struct {
 	Message           string  `json:"message"`
 	AchievementPoints int     `json:"AchievementPoints"`
@@ -274,18 +313,19 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 		return chara
 	}
 
-	body, err := webGetRequest("https://api.maplestory.gg/v1/public/character/gms/" + name)
+	body, err := webGetRequest("https://api.maplestory.gg/v2/public/character/gms/" + name)
 	if err != nil {
 		return CharInfoResult{"", "查询失败"}
 	}
 
-	var mapleInfo MapleInfo
-	err = json.Unmarshal(body, &mapleInfo)
+	var mapleInfo2 MapleInfo2
+	err = json.Unmarshal(body, &mapleInfo2)
+	mapleInfo := mapleInfo2.CharacterData
 	if err != nil || len(mapleInfo.Name) == 0 {
 		return CharInfoResult{"", "查询失败2"}
 	}
 
-	if mapleInfo.Message == "Unable to find character" {
+	if mapleInfo2.Message == "Unable to find character" {
 		// 查询的角色不存在
 		checkNumberOfTimes[gropFromQQ]++
 		charactersCatch[name] = CharInfoResult{"", "查询的角色不存在"}
@@ -343,19 +383,15 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	return result
 }
 
-func calcExpDay(level int64, mapleInfo MapleInfo) string {
+func calcExpDay(level int64, mapleInfo CharacterData) string {
 	if level == 300 {
 		return "大佬啊~ 带我打Boss！ 我混车超稳的！"
 	}
 
 	var totalExp int64
-	var nextLevel int64
-	for _, nextLevelExp := range TotalExpCollection {
-		if level < nextLevelExp.Level {
-			totalExp = nextLevelExp.Exp
-			nextLevel = nextLevelExp.Level
-			break
-		}
+	var nextLevel = level + 5 - level%5
+	for i := int64(1); i < nextLevel; i++ {
+		totalExp += LevelExp[i]
 	}
 
 	var day float64

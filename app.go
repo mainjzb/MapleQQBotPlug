@@ -83,31 +83,8 @@ func UnescapeUnicode(raw string) string {
 }
 
 func test() {
-	/*
-		dir, _ := os.Getwd()
-		GetAllGroupList(loginQQ)
-
-		image1 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd1.jpg") //elemAd1.jpg
-		image2 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd2.jpg")
-		SendGroupMsg(loginQQ, 698931513, "嘀嘀嘀！干饭时间到了！冲冲冲!")
-		SendGroupMsg(loginQQ, 698931513, image1+image2)
-		//time.Sleep(time.Second * 3)
-	*/
-	//bindCharacter(1, 350210491, 350210491, "PaperWang")
-	//IsBanQQ(1229237658)
-	//bindCharacter(1, 350210491, 350210491, "PaperWang1")
-	//gdb, err := gorm.Open(sqlite.Open("MapleMiao.db"), &gorm.Config{})
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-	//cas := service.NewCasbin(gdb)
-	//service.AddLevel(698931513, 212427942, 123456, 2)
-	//ok, _ := cas.Enforce(698931513, 212427942, service.QA, "write")
-	//service.DeleteLevel(698931513, 212427942, 123456)
-	//fmt.Println(ok)
-	//QueryRanking("Foxitis",1)
-	//CheckClassRank(1, 1, 1, "Z3tton")
-	//CheckMaplestoryInfo()
+	res := CheckMapleGG("paperwang", 0)
+	fmt.Println(res)
 }
 
 func main() {

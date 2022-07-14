@@ -16,7 +16,7 @@ func webGetRequest(url string) (result []byte, err error) {
 	ieproxy.OverrideEnvWithStaticProxy()
 	http.DefaultTransport.(*http.Transport).Proxy = ieproxy.GetProxyFunc()
 	client := http.Client{
-		Timeout: 4 * time.Second,
+		Timeout: 8 * time.Second,
 	}
 
 	resp, err := client.Get(url)
