@@ -3,10 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/mainjzb/MapleQQBotPlug/config"
-	"github.com/mainjzb/MapleQQBotPlug/service"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -14,13 +11,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mainjzb/MapleQQBotPlug/config"
+	"github.com/mainjzb/MapleQQBotPlug/service"
 )
 
 func QAReply(loginQQ, fromGroup, fromQQ int, msg string) bool {
 
-	//普通查询
+	// 普通查询
 	sqlStmt := `SELECT answer_template.text FROM question_template INNER JOIN answer_template ON  question_template.id = answer_template.parent   WHERE gc=? AND question_template.text=? AND question_template.match!=10;`
-	//正则查询  match=10是正则
+	// 正则查询  match=10是正则
 	sqlStmtReg := `SELECT question_template.text, answer_template.text FROM question_template INNER JOIN answer_template ON  question_template.id = answer_template.parent  WHERE gc=? AND question_template.match=10;`
 	var answers = make([]string, 0)
 	rows1, err := dbQA.Query(sqlStmt, fromGroup, msg)
@@ -72,7 +72,7 @@ func QAReply(loginQQ, fromGroup, fromQQ int, msg string) bool {
 	return false
 }
 
-func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
+func AddQA(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 	/*
 		1、查询这个问题是否存在，不存在则创建问题
 		2、添加回答，父ID是问题ID
@@ -91,9 +91,9 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 	}
 
 	if parentID < 0 {
-		//添加问题到数据库
-		//sqlStmtQueryInsert := `INSERT INTO question_template VALUES (NULL,732888280,'dcw', 3, 0, 0,0,0,1139035718,1597033184);`
-		//rows1, err := dbQA.Query(sqlStmtQueryInsert, fromGroup, msg)
+		// 添加问题到数据库
+		// sqlStmtQueryInsert := `INSERT INTO question_template VALUES (NULL,732888280,'dcw', 3, 0, 0,0,0,1139035718,1597033184);`
+		// rows1, err := dbQA.Query(sqlStmtQueryInsert, fromGroup, msg)
 		stmt, err := dbQA.Prepare(`INSERT INTO question_template VALUES (NULL, ?, ?, ?, 0, 0, 0, 0, ?, ?);`)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -110,20 +110,19 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 		if err != nil {
 			return false
 		}
-		//SendGroupMsg(loginQQ, fromGroup, "问题已添加")
+		// SendGroupMsg(loginQQ, fromGroup, "问题已添加")
 	}
 
-	//理论检测 assert
+	// 理论检测 assert
 	if parentID == -1 {
 		return false
 	}
 
-	//2.1  获取答案里的图片pic
-
+	// 获取答案里的图片pic
 	reg, _ := regexp.Compile(`\[pic,[^\[\]]*\]`)
 	picList := reg.FindStringSubmatch(ansMsg)
 
-	//2.2 下载图片存到本地
+	// 下载图片存到本地
 	for _, picHash := range picList {
 		imagPath := GetPhotoURL(loginQQ, fromGroup, picHash)
 		dir, _ := os.Getwd()
@@ -133,7 +132,7 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 		if err != nil {
 			return false
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return false
 		}
@@ -144,12 +143,12 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 		io.Copy(out, bytes.NewReader(body))
 		out.Close()
 
-		//2.3 修改答案
+		// 修改答案
 		ansMsg = strings.ReplaceAll(ansMsg, picHash, name)
 	}
 
-	//3、添加答案
-	//INSERT INTO answer_template (id, parent, text,  created ,createdTime) VALUES (NULL, 500, '不知道', 99999999, 111111);
+	// 添加答案
+	// INSERT INTO answer_template (id, parent, text,  created ,createdTime) VALUES (NULL, 500, '不知道', 99999999, 111111);
 	stmt2, err := dbQA.Prepare(`INSERT INTO answer_template (id, parent, text,  created ,createdTime) VALUES (NULL, ?, ?, ?, ?);`)
 
 	if err != nil {
@@ -170,7 +169,7 @@ func QAAddMatch(loginQQ, fromGroup, fromQQ int, queMsg, ansMsg string) bool {
 
 	SendGroupMsg(loginQQ, fromGroup, "添加成功问题ID:"+strconv.FormatInt(parentID, 10)+", 答案ID:"+strconv.FormatInt(instertID, 10))
 
-	//sqlStmtInsert := `INSERT INTO question_template VALUES (NULL,732888280,'dcw', 3, 0, 0,0,0,1139035718,1597033184);`
+	// sqlStmtInsert := `INSERT INTO question_template VALUES (NULL,732888280,'dcw', 3, 0, 0,0,0,1139035718,1597033184);`
 
 	return true
 }
@@ -188,7 +187,7 @@ func QADeleteQuestion(loginQQ, fromGroup, fromQQ int, msg string) bool {
 		return true
 	}
 
-	//delete question
+	// delete question
 	stmtQue, err := dbQA.Prepare("delete from question_template where text=? AND lock = 0 AND match=0 AND gc = ?")
 	if err != nil {
 		return false
@@ -208,7 +207,7 @@ func QADeleteQuestion(loginQQ, fromGroup, fromQQ int, msg string) bool {
 	// 删除答案包含的图片
 	deleteAnsPic(parentID)
 
-	//delete answer
+	// delete answer
 	stmtAns, err := dbQA.Prepare("delete from answer_template where parent=? AND lock = 0")
 	if err != nil {
 		return false
@@ -245,7 +244,7 @@ func AuthorityQuery(fromGroup, fromQQ int) (right int) {
 
 func getQueMsgID(fromGroup int, msg string) (parentID, lock int64) {
 	parentID = -1
-	//query parent ID
+	// query parent ID
 	sqlStmtQuery := `SELECT id, lock FROM question_template WHERE gc=? AND text=? AND question_template.match = 0;`
 	rows1, err := dbQA.Query(sqlStmtQuery, fromGroup, msg)
 	if err != nil {
@@ -270,7 +269,7 @@ func getQueMsgID(fromGroup int, msg string) (parentID, lock int64) {
 func getFuzzyQueMsgIDs(fromGroup int, msg string) (questions map[int64]string) {
 	msg = "%" + msg + "%"
 	questions = make(map[int64]string)
-	//query parent ID
+	// query parent ID
 	sqlStmtQuery := `SELECT id, text FROM question_template WHERE gc=? AND match = 0 AND text LIKE ?;`
 	rows1, err := dbQA.Query(sqlStmtQuery, fromGroup, msg)
 	if err != nil {
@@ -480,7 +479,7 @@ func DeleteAnswer(loginQQ, fromGroup, fromQQ int, msg string) bool {
 		return false
 	}
 
-	//delete answer
+	// delete answer
 	stmtAns, err := dbQA.Prepare("delete from answer_template where id=? AND lock = 0")
 	if err != nil {
 		return false

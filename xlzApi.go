@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -75,7 +76,7 @@ func Sendprivatemsg(LoginQQ, toQQ int, text string) {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	//resp, err := client.Do(r)
+	// resp, err := client.Do(r)
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -105,14 +106,14 @@ func SendGroupMsg(LoginQQ, formGroup int, text string) {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	//resp, err := client.Do(r)
+	// resp, err := client.Do(r)
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 	defer resp.Body.Close()
-	//fmt.Println(resp.Status)
+	// fmt.Println(resp.Status)
 }
 
 func GetGropCard(LoginQQ, formGrop, toQQ int) string {
@@ -137,7 +138,7 @@ func GetGropCard(LoginQQ, formGrop, toQQ int) string {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	//resp, err := client.Do(r)
+	// resp, err := client.Do(r)
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -156,7 +157,7 @@ func GetGropCard(LoginQQ, formGrop, toQQ int) string {
 }
 
 func GetAdminList(LoginQQ, formGrop int) []string {
-	//{"ret":"212427942\r\n404346435\r\n451782246\r\n517682597\r\n565436128\r\n594900769\r\n1021268160\r\n1732351842\r\n2637020248\r\n"}
+	// {"ret":"212427942\r\n404346435\r\n451782246\r\n517682597\r\n565436128\r\n594900769\r\n1021268160\r\n1732351842\r\n2637020248\r\n"}
 	apiUrl := "http://127.0.0.1:10429"
 	resource := "/getgroupmgrlist"
 	data := url.Values{}
@@ -257,7 +258,7 @@ func GetGroupImage(loginQQ, formGrop, fromtype int, ImagePath string) string {
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	//resp, err := client.Do(r)
+	// resp, err := client.Do(r)
 	resp, err := client.Do(r)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -266,7 +267,7 @@ func GetGroupImage(loginQQ, formGrop, fromtype int, ImagePath string) string {
 	defer resp.Body.Close()
 
 	card := RetMessage{}
-	resultByte, err := ioutil.ReadAll(resp.Body)
+	resultByte, err := io.ReadAll(resp.Body)
 	fmt.Println(string(resultByte))
 	err = json.Unmarshal(resultByte, &card)
 	if err != nil {
@@ -317,7 +318,7 @@ func GetPhotoURL(loginQQ, formGrop int, pic string) string {
 }
 
 func GetAllGroupList(LoginQQ int) []int {
-	//{"ret":"212427942\r\n404346435\r\n451782246\r\n517682597\r\n565436128\r\n594900769\r\n1021268160\r\n1732351842\r\n2637020248\r\n"}
+	// {"ret":"212427942\r\n404346435\r\n451782246\r\n517682597\r\n565436128\r\n594900769\r\n1021268160\r\n1732351842\r\n2637020248\r\n"}
 	apiUrl := "http://127.0.0.1:10429"
 	resource := "/getgrouplist"
 	data := url.Values{}

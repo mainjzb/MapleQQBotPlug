@@ -3,10 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/mainjzb/go.num/v2/zh"
-	"github.com/mattn/go-ieproxy"
-	"gorm.io/gorm"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +10,11 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/mainjzb/go.num/v2/zh"
+	"github.com/mattn/go-ieproxy"
+	"gorm.io/gorm"
 )
 
 type QQBindCharacter struct {
@@ -288,7 +289,7 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 
 	// 保存数据进缓存
 	checkNumberOfTimes[gropFromQQ]++
-	//charactersLevelRank[strconv.Itoa(rankInfo[0].)] = name
+	// charactersLevelRank[strconv.Itoa(rankInfo[0].)] = name
 	if rankInfo[0].Level > 219 && rankInfo[0].WorldID == 45 { // 大于219且在R区才有排名记录缓存
 		jobWithRank := fmt.Sprintf("%v%v", rRankInfo[0].JobName, rRankInfo[0].Rank)
 		classLevelRank[jobWithRank] = rankInfo[0].CharacterName
@@ -316,6 +317,14 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	body, err := webGetRequest("https://api.maplestory.gg/v2/public/character/gms/" + name)
 	if err != nil {
 		return CharInfoResult{"", "查询失败"}
+	}
+	mutilLine := strings.Split(string(body), "\n")
+	currentLen := 0
+	for _, s := range mutilLine {
+		if len(s) > currentLen {
+			currentLen = len(s)
+			body = []byte(s)
+		}
 	}
 
 	var mapleInfo2 MapleInfo2
