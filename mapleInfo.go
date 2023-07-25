@@ -113,7 +113,7 @@ var classURL = map[string]string{
 	"等级":              "https://maplestory.nexon.net/api/ranking?id=world&id2=45&rebootIndex=0&page_index=",
 }
 
-var LevelExp = map[int64]int64{
+var LevelExp = map[int]int64{
 	1:   15,
 	2:   34,
 	3:   57,

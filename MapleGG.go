@@ -147,7 +147,7 @@ type OfficialJobRank []struct {
 	JobID           int64       `json:"JobID"`
 	JobName         string      `json:"JobName"`
 	LegionLevel     int64       `json:"LegionLevel"`
-	Level           int64       `json:"Level"`
+	Level           int         `json:"Level"`
 	MatchSN         interface{} `json:"MatchSN"`
 	Percentile      interface{} `json:"Percentile"`
 	PetImgURL       string      `json:"PetImgUrl"`
@@ -239,7 +239,7 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 	result.imageURL = rankInfo[0].CharacterImgURL
 	outName := strconv.QuoteToASCII(rankInfo[0].CharacterName)
 	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverName2Chinese[rankInfo[0].WorldName] + "）\n"
-	exp := float64(rankInfo[0].Exp) / float64(LevelExp[rankInfo[0].Level]) * 100
+	exp := float64(rankInfo[0].Exp) / float64(LevelExp[int(rankInfo[0].Level)]) * 100
 	result.info += fmt.Sprintf("等级:%v - %.2f%% \n", rankInfo[0].Level, exp)
 
 	rRankInfo := OfficialJobRank{}
@@ -301,7 +301,7 @@ func CheckOfficialRank(name string, gropFromQQ int) (result CharInfoResult) {
 func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	name = strings.TrimSpace(name)
 	if len(name) == 0 {
-		return CharInfoResult{"", "查询失败"}
+		return CharInfoResult{"", "查询失败, 内容为空"}
 	}
 	resetCacheEveryday()
 	if checkNumberOfTimes[gropFromQQ] >= 12 {
@@ -316,7 +316,7 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 
 	body, err := webGetRequest("https://api.maplestory.gg/v2/public/character/gms/" + name)
 	if err != nil {
-		return CharInfoResult{"", "查询失败"}
+		return CharInfoResult{"", "查询失败，网络错误：" + err.Error()}
 	}
 	mutilLine := strings.Split(string(body), "\n")
 	currentLen := 0
@@ -345,7 +345,7 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	result.imageURL = mapleInfo.CharacterImageURL
 	outName := strconv.QuoteToASCII(mapleInfo.Name)
 	result.info += "角色:" + outName[1:len(outName)-1] + "  （" + serverName2Chinese[mapleInfo.Server] + "）\n"
-	result.info += fmt.Sprintf("等级:%v - %v%% （排名%v）\n", mapleInfo.Level, mapleInfo.EXPPercent, mapleInfo.ServerRank)
+	result.info += fmt.Sprintf("等级:%v - %.2f%% （排名%v）\n", mapleInfo.Level, float64(mapleInfo.EXP)/float64(LevelExp[mapleInfo.Level])*100, mapleInfo.ServerRank)
 	if mapleInfo.ServerClassRanking > 0 {
 		result.info += fmt.Sprintf("职业:%v（排名%v）\n\n", mapleInfo.Class, mapleInfo.ServerClassRanking)
 	} else {
@@ -375,7 +375,7 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	}
 
 	result.info += "---------------------------------\n"
-	result.info += calcExpDay(int64(mapleInfo.Level), mapleInfo)
+	result.info += calcExpDay(mapleInfo.Level, mapleInfo)
 	fmt.Println(result.info)
 
 	// 保存数据进缓存
@@ -392,26 +392,40 @@ func CheckMapleGG(name string, gropFromQQ int) CharInfoResult {
 	return result
 }
 
-func calcExpDay(level int64, mapleInfo CharacterData) string {
+func calcExpDay(level int, mapleInfo CharacterData) string {
 	if level == 300 {
 		return "大佬啊~ 带我打Boss！ 我混车超稳的！"
 	}
 
-	var totalExp int64
 	var nextLevel = level + 5 - level%5
-	for i := int64(1); i < nextLevel; i++ {
-		totalExp += LevelExp[i]
-	}
 
 	var day float64
 	var dayOne float64
 	dateLen := len(mapleInfo.GraphData)
 	if dateLen > 1 {
-		avgDayExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[0].TotalOverallEXP)
-		day = float64(dateLen-1) * float64(totalExp-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / avgDayExp
-		lastDayExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
-		if lastDayExp != 0 {
-			dayOne = float64(totalExp-mapleInfo.GraphData[dateLen-1].TotalOverallEXP) / lastDayExp
+		var totalExp int64
+		for i := mapleInfo.Level; i < nextLevel; i++ {
+			totalExp += LevelExp[i]
+		}
+
+		// increaseExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[0].TotalOverallEXP)
+		var increaseExp int64 = 0
+		for i := mapleInfo.GraphData[0].Level; i < mapleInfo.GraphData[dateLen-1].Level; i++ {
+			increaseExp += LevelExp[i]
+		}
+		increaseExp = increaseExp - mapleInfo.GraphData[0].CurrentEXP + mapleInfo.GraphData[dateLen-1].CurrentEXP
+		if increaseExp != 0 {
+			day = float64(dateLen-1) * float64(totalExp-mapleInfo.EXP) / float64(increaseExp)
+		}
+
+		// lastDayExp := float64(mapleInfo.GraphData[dateLen-1].TotalOverallEXP - mapleInfo.GraphData[dateLen-2].TotalOverallEXP)
+		var lastDayIncreaseExp int64 = 0
+		for i := mapleInfo.GraphData[dateLen-2].Level; i < mapleInfo.GraphData[dateLen-1].Level; i++ {
+			lastDayIncreaseExp += LevelExp[i]
+		}
+		lastDayIncreaseExp = lastDayIncreaseExp - mapleInfo.GraphData[dateLen-2].CurrentEXP + mapleInfo.GraphData[dateLen-1].CurrentEXP
+		if lastDayIncreaseExp != 0 {
+			dayOne = float64(totalExp-mapleInfo.EXP) / float64(lastDayIncreaseExp)
 		}
 	}
 

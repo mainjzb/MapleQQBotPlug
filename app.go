@@ -6,6 +6,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+
 	"github.com/PuerkitoBio/goquery"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/mainjzb/MapleQQBotPlug/config"
@@ -17,15 +27,6 @@ import (
 	"golang.org/x/net/websocket"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-	"unicode"
 )
 
 type QQMessage struct {
@@ -83,13 +84,13 @@ func UnescapeUnicode(raw string) string {
 }
 
 func test() {
-	res := CheckMapleGG("paperwang", 0)
+	res := CheckMapleGG("TigerZY", 0)
 	fmt.Println(res)
 }
 
 func main() {
-	test()
-	//0----------------------------------------------
+	// test()
+	// 0----------------------------------------------
 
 	ws, err := websocket.Dial("ws://127.0.0.1:10429", "", "ws://127.0.0.1:10429")
 	if err != nil {
@@ -146,8 +147,8 @@ func main() {
 				logrus.Error(err)
 				continue
 			}
-			//fmt.Println(string(resultByte))
-			//resultString := string(resultByte)
+			// fmt.Println(string(resultByte))
+			// resultString := string(resultByte)
 			jsonList := bytes.Split(resultByte, []byte("\r"))
 			for _, jsonText := range jsonList {
 				if len(string(jsonText)) > 5 {
@@ -173,7 +174,7 @@ func main() {
 								continue
 							}
 
-							//fmt.Println(message.Events[i].Msg.Text)
+							// fmt.Println(message.Events[i].Msg.Text)
 							groupMessage := UnescapeUnicode(message.Events[i].Msg.Text)
 							groupMessage = strings.TrimSpace(groupMessage)
 							gropFromGroup := message.Events[i].FromGroup.GIN
@@ -198,7 +199,7 @@ func init() {
 	charactersLevelRank = make(map[string]string)
 	checkNumberOfTimes = make(map[int]int)
 
-	//config
+	// config
 	conf := config.Init(*configFile)
 	loginQQ = int(conf.LoginQQ)
 
@@ -266,21 +267,21 @@ func GetMaplestoryVersionInfo(loginQQ, fromGroup, fromQQ int, groupMessage strin
 		return true
 	}
 	defer resp.Body.Close()
-	//body, err := ioutil.ReadAll(resp.Body)
-	//content := string(body)
-	//content = content[strings.Index(content,"</head>") + 7:]
+	// body, err := ioutil.ReadAll(resp.Body)
+	// content := string(body)
+	// content = content[strings.Index(content,"</head>") + 7:]
 
-	//doc, err := html.ParseWithOptions(strings.NewReader(content), html.ParseOptionEnableScripting(false))
+	// doc, err := html.ParseWithOptions(strings.NewReader(content), html.ParseOptionEnableScripting(false))
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	doc.Find(".card-threadlist .card-body li .subject").Each(func(i int, s *goquery.Selection) {
-		//fmt.Println(i, s.Text())
+		// fmt.Println(i, s.Text())
 		// For each item found, get the band and titl
 		band, ok := s.Last().Find("a").First().Attr("href")
-		//title := s.Find("i").Text()
+		// title := s.Find("i").Text()
 		if ok {
 			result = "https://bbs.gjfmxd.com/" + band
 		}
@@ -299,11 +300,11 @@ func GetMaplestoryMaintainInfo(loginQQ, fromGroup, fromQQ int, groupMessage stri
 		return true
 	}
 	defer resp.Body.Close()
-	//body, err := ioutil.ReadAll(resp.Body)
-	//content := string(body)
-	//content = content[strings.Index(content,"</head>") + 7:]
+	// body, err := ioutil.ReadAll(resp.Body)
+	// content := string(body)
+	// content = content[strings.Index(content,"</head>") + 7:]
 
-	//doc, err := html.ParseWithOptions(strings.NewReader(content), html.ParseOptionEnableScripting(false))
+	// doc, err := html.ParseWithOptions(strings.NewReader(content), html.ParseOptionEnableScripting(false))
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -326,7 +327,7 @@ func GetMaplestoryMaintainInfo(loginQQ, fromGroup, fromQQ int, groupMessage stri
 	return true
 }
 
-//查询官网信息
+// 查询官网信息
 func CheckMaplestoryInfo() {
 	var content = ""
 	for {
@@ -369,7 +370,7 @@ func CheckMaplestoryInfo() {
 func sendADs() {
 	dir, _ := os.Getwd()
 
-	image1 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd1.jpg") //elemAd1.jpg
+	image1 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd1.jpg") // elemAd1.jpg
 	image2 := GetGroupImage(loginQQ, 698931513, 1, dir+"\\Botimage\\elemAd2.jpg")
 	SendGroupMsg(loginQQ, 698931513, "嘀嘀嘀！干饭时间到了！冲冲冲!")
 	SendGroupMsg(loginQQ, 698931513, image1+image2)
@@ -394,8 +395,8 @@ func route(loginQQ, fromGroup, fromQQ int, groupMessage string) {
 		Pre      []string
 	}{
 		{QueryContainQuestion, []string{"模糊查询问题", "模糊搜索问题"}},
-		{QueryQuestion, []string{"文本查询问题"}},
-		{DeleteAnswer, []string{"删除答案", "删除问题"}},
+		{QueryQuestion, []string{"文本查询问题", "查询问题"}},
+		{DeleteAnswer, []string{"删除答案"}},
 		{bindCharacter, []string{"查询绑定", "绑定查询", "绑定"}},
 		{CheckClassRank, []string{"查询"}},
 		{AddQuestion, []string{"问"}},
